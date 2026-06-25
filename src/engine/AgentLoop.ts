@@ -68,7 +68,7 @@ export class AgentLoop {
       let assistantMessage: Message;
       try {
         assistantMessage = await this.streamOnce(messagesForApi, tools, ctx, input);
-      } catch (err) {
+      } catch (err: unknown) {
         if (ctx.aborted) {
           yield { type: "error", message: "stopped" };
           return;
@@ -118,8 +118,8 @@ export class AgentLoop {
         let result: ToolResult;
         try {
           result = await this.registry.execute(tool.name, args, ctx);
-        } catch (err) {
-          result = { success: false, error: (err as Error).message };
+        } catch (err: unknown) {
+          result = { success: false, error: err instanceof Error ? err.message : String(err) };
         }
 
         const summary = summarize(result);

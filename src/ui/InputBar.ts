@@ -107,7 +107,7 @@ export class InputBar {
     const skillMatch = cleaned1.match(/^\s*\$\s+([^\s]+).*$/m);
     let skillBody: string | undefined;
     if (skillMatch?.[1]) {
-      skillBody = await this.plugin.skillLoader.get(skillMatch[1]).then((s) => s?.body as string | undefined);
+      skillBody = await this.plugin.skillLoader.get(skillMatch[1]).then((s) => s?.body);
     }
     const text = cleaned1.replace(/^\s*\$\s+[^\s]+.*$/m, "").trim();
 
@@ -171,8 +171,8 @@ export class InputBar {
   }
 
   private autosize(): void {
-    this.textarea.style.height = "auto";
-    this.textarea.style.height = `${Math.min(this.textarea.scrollHeight, 160)}px`;
+    this.textarea.setCssProps({ height: "auto" });
+    this.textarea.setCssProps({ height: `${Math.min(this.textarea.scrollHeight, 160)}px` });
   }
 
   // --- image attachment ------------------------------------------------

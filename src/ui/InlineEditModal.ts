@@ -107,10 +107,11 @@ ${ctxLine}`;
           this.close();
         }))
         .addButton((b) => b.setButtonText(this.t("inline.regenerate")).onClick(() => void this.generate()));
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error("inline edit failed", err);
       this.diffHost.empty();
-      this.diffHost.createEl("p", { cls: "deepseek-message__error", text: (err as Error).message });
+      const msg = err instanceof Error ? err.message : String(err);
+      this.diffHost.createEl("p", { cls: "deepseek-message__error", text: msg });
     } finally {
       this.busy = false;
     }

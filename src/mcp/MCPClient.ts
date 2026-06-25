@@ -1,3 +1,4 @@
+import { requestUrl } from "obsidian";
 import { logger } from "../utils/logger";
 import { type MCPToolSchema } from "./MCPToolAdapter";
 
@@ -19,8 +20,8 @@ export class MCPClient {
     if (config.transport === "http") {
       this.httpBase = config.commandOrUrl;
       // Test reachability.
-      const resp = await fetch(`${this.httpBase}/tools/list`);
-      if (!resp.ok) throw new Error(`MCP http connect failed: ${resp.status}`);
+      const resp = await requestUrl({ url: `${this.httpBase}/tools/list`, throw: false });
+      if (resp.status >= 400) throw new Error(`MCP http connect failed: ${resp.status}`);
       logger.info("mcp http connected", config.name);
       return;
     }
@@ -41,9 +42,9 @@ export class MCPClient {
   /** Fetch tool list from the connected server. */
   async listTools(): Promise<MCPToolSchema[]> {
     if (this.httpBase) {
-      const resp = await fetch(`${this.httpBase}/tools/list`);
-      const tools = (await resp.json()).tools as MCPToolSchema[];
-      return tools;
+      const resp = await requestUrl({ url: `${this.httpBase}/tools/list`, throw: false });
+      const data = JSON.parse(resp.text) as { tools: MCPToolSchema[] };
+      return data.tools ?? [];
     }
     const result = (await this.call("tools/list", {})) as { tools: MCPToolSchema[] };
     return result.tools ?? [];
@@ -52,12 +53,14 @@ export class MCPClient {
   /** Call a named MCP tool and return the raw result. */
   async callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
     if (this.httpBase) {
-      const resp = await fetch(`${this.httpBase}/tools/call`, {
+      const resp = await requestUrl({
+        url: `${this.httpBase}/tools/call`,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, arguments: args }),
+        throw: false,
       });
-      const data = (await resp.json()) as { error?: unknown; result?: unknown };
+      const data = JSON.parse(resp.text) as { error?: unknown; result?: unknown };
       if (data.error) throw new Error(JSON.stringify(data.error));
       return data.result;
     }
@@ -86,15 +89,15 @@ export class MCPClient {
       this.buffer = this.buffer.slice(idx + 1);
       if (!line) continue;
       try {
-        const msg = JSON.parse(line);
-        const id = msg.id as number | undefined;
+        const msg = JSON.parse(line) as { id?: number; error?: unknown; result?: unknown };
+        const id = msg.id;
         if (id !== undefined && this.pending.has(id)) {
           const p = this.pending.get(id)!;
           this.pending.delete(id);
           if (msg.error) p.reject(new Error(JSON.stringify(msg.error)));
           else p.resolve(msg.result);
         }
-      } catch { /* ignore partial */ }
+      } catch (err: unknown) { void err; /* ignore partial */ }
     }
   }
 

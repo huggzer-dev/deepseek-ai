@@ -1,3 +1,4 @@
+import { requestUrl } from "obsidian";
 import { defineTool } from "../ToolDefinition";
 import { RiskLevel } from "../../types";
 
@@ -16,9 +17,9 @@ export const WebFetch = defineTool({
   async execute(args) {
     const url = String(args.url ?? "");
     const max = Number(args.maxChars ?? 20000);
-    const resp = await fetch(url);
-    if (!resp.ok) return { success: false, error: `HTTP ${resp.status}` };
-    let text = await resp.text();
+    const resp = await requestUrl({ url, throw: false });
+    if (resp.status >= 400) return { success: false, error: `HTTP ${resp.status}` };
+    let text = resp.text;
     let truncated = false;
     if (text.length > max) {
       text = text.slice(0, max);

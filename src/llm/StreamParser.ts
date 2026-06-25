@@ -44,8 +44,8 @@ export class StreamParser {
     let json: Record<string, unknown>;
     try {
       json = JSON.parse(line);
-    } catch {
-      return;
+    } catch (err: unknown) {
+      return void err;
     }
     const choices = json.choices as unknown[] | undefined;
     const choice = choices?.[0] as Record<string, unknown> | undefined;

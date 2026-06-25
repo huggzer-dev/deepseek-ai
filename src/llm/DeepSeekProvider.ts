@@ -1,9 +1,11 @@
+import { requestUrl } from "obsidian";
 import { DEEPSEEK_BASE_URL, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
 import { StreamParser } from "./StreamParser";
 
 /**
  * DeepSeek LLM provider — direct HTTPS calls to the official endpoint.
- * No SDK dependency; uses raw `fetch` + ReadableStream for SSE streaming.
+ * Uses `requestUrl` for non-streaming FIM and raw `fetch` for SSE streaming
+ * (Obsidian's `requestUrl` does not support streaming bodies).
  */
 export class DeepSeekProvider {
   constructor(private apiKey: string) {}
@@ -26,6 +28,7 @@ export class DeepSeekProvider {
       body.tool_choice = opts.toolChoice ?? "auto";
     }
 
+    // requestUrl does not support streaming; fall back to fetch for SSE.
     const resp = await fetch(url, {
       method: "POST",
       headers: {
@@ -46,7 +49,8 @@ export class DeepSeekProvider {
 
   async fim(prompt: string, suffix: string, opts: FIMOptions): Promise<string> {
     const url = `${DEEPSEEK_BASE_URL}/beta/completions`;
-    const resp = await fetch(url, {
+    const resp = await requestUrl({
+      url,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -60,18 +64,18 @@ export class DeepSeekProvider {
         temperature: opts.temperature,
         stream: false,
       }),
-      signal: opts.signal,
+      throw: false,
     });
-    if (!resp.ok) throw new Error(`DeepSeek FIM ${resp.status}: ${await safeReadText(resp)}`);
-    const data = await resp.json();
-    return (data.choices?.[0]?.text ?? "") as string;
+    if (resp.status >= 400) throw new Error(`DeepSeek FIM ${resp.status}: ${resp.text}`);
+    const data = JSON.parse(resp.text) as { choices?: { text?: string }[] };
+    return data.choices?.[0]?.text ?? "";
   }
 }
 
 async function safeReadText(resp: Response): Promise<string> {
   try {
     return await resp.text();
-  } catch {
-    return "";
+  } catch (err: unknown) {
+    return String(err);
   }
 }

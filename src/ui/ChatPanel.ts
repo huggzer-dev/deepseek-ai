@@ -243,12 +243,13 @@ export class ChatPanel {
       }
       session.updatedAt = Date.now();
       await this.persistSession();
-    } catch (err) {
+    } catch (err: unknown) {
       const aborted = ac.signal.aborted;
       ctx.aborted = aborted;
       assistantBubble.finish(aborted);
       if (!aborted) {
-        const msg = translate(this.plugin.settings.language, "errors.networkError") + (err as Error).message;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const msg = translate(this.plugin.settings.language, "errors.networkError") + errMsg;
         assistantBubble.markError(msg);
         assistantBubble.addButton(translate(this.plugin.settings.language, "chat.retry"), () => void this.retry());
       }

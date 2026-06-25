@@ -104,14 +104,14 @@ export default class DeepSeekPlugin extends Plugin {
   async onunload(): Promise<void> {
     try {
       await this.store.saveAll(this.sessions.list());
-    } catch (err) {
+    } catch (err: unknown) {
       logger.warn("failed to persist sessions on unload", err);
     }
   }
 
   async activateChatView(): Promise<void> {
     const { workspace } = this.app;
-    let leaf = workspace.getLeavesOfType(VIEW_TYPE_CHAT)[0];
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_CHAT)[0] ?? null;
     if (!leaf) {
       const right = workspace.getRightLeaf(false);
       if (!right) {
@@ -154,7 +154,7 @@ export default class DeepSeekPlugin extends Plugin {
     for (const s of builtin) {
       try {
         await this.skillLoader.save(s.name, s.body);
-      } catch (err) {
+      } catch (err: unknown) {
         logger.warn("failed to seed skill", s.name, err);
       }
     }

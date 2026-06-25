@@ -63,7 +63,7 @@ export class AgentLoop {
       loops += 1;
       const tools = this.contextBuilder.toolSchemas();
       const history = session.messages.slice(); // snapshot for the request
-      const messagesForApi = [history[0]!, ...history.slice(1)];
+      const messagesForApi = [history[0], ...history.slice(1)] as Message[];
 
       let assistantMessage: Message;
       try {

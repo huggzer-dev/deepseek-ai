@@ -28,7 +28,7 @@ export class ToolRegistry {
     if (!tool) return { success: false, error: `unknown tool: ${name}` };
     try {
       return await tool.execute(args, ctx);
-    } catch (err) {
+    } catch (err: unknown) {
       return { success: false, error: err instanceof Error ? err.message : String(err) };
     }
   }

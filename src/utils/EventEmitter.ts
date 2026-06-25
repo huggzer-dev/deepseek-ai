@@ -23,7 +23,7 @@ export class EventEmitter<TEvents extends Record<string, unknown>> {
     this.listeners[event]?.forEach((l) => {
       try {
         l(payload);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[EventEmitter] listener error", err);
       }
     });

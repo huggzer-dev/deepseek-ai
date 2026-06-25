@@ -6,7 +6,7 @@ import { InputBar, type ParsedInput } from "./InputBar";
 import { ConversationTabs } from "./ConversationTabs";
 import { translate } from "../i18n";
 import { logger } from "../utils/logger";
-import type { Message, ToolContext, AgentEvent, ContextInput } from "../types";
+import type { Message, ToolContext, ContextInput } from "../types";
 
 /**
  * Owns the chat sidebar: renders message list + input bar + tab bar and
@@ -150,7 +150,7 @@ export class ChatPanel {
       try {
         const content = await this.app.vault.read(f);
         mentionContents.push(`## @${f.path}\n\n${content}`);
-      } catch (err) {
+      } catch (err: unknown) {
         logger.warn("failed to read mentioned file", f.path, err);
       }
     }
@@ -206,7 +206,7 @@ export class ChatPanel {
       while (true) {
         const { value, done } = await gen.next();
         if (done) break;
-        const ev = value as AgentEvent;
+        const ev = value;
         switch (ev.type) {
           case "text_delta":
             assistantBubble.appendDelta(ev.content);
@@ -290,7 +290,7 @@ export class ChatPanel {
 
   private appendMessage(m: Message): void {
     const content = contentToString(m.content);
-    const bubble = new MessageBubble(this.app, this.messagesEl!, m.role as "user" | "assistant" | "system" | "tool");
+    const bubble = new MessageBubble(this.app, this.messagesEl!, m.role);
     this.bubbles.push(bubble);
     bubble.setContent(content);
     this.scrollToBottom();
@@ -310,7 +310,7 @@ export class ChatPanel {
   private async persistSession(): Promise<void> {
     try {
       await this.plugin.store.saveAll(this.plugin.sessions.list());
-    } catch (err) {
+    } catch (err: unknown) {
       logger.warn("failed to persist session", err);
     }
   }

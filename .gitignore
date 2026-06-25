@@ -4,6 +4,10 @@ main.js.map
 dist/
 *.tsbuildinfo
 
+# Local plugin data (written by Obsidian at runtime when the plugin
+# loads — must never be committed)
+data.json
+
 # Dependencies
 node_modules/
 

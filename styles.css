@@ -73,20 +73,22 @@
   border-radius: 3px;
 }
 
-/* welcome empty state — right-aligned to match Obsidian screenshot */
+/* welcome empty state — centered */
 .dsai-empty {
-  text-align: right;
-  margin: auto 0;
+  text-align: center;
+  margin: auto;
   color: var(--dsai-text-muted);
   font-size: 13px;
   padding: 8px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* message bubbles — Claudian style: user right, assistant left plain */
 .dsai-msg { display: flex; flex-direction: column; max-width: 92%; }
+.dsai-msg .dsai-bubble {
+  user-select: text;  /* allow mouse-drag copy of historical messages */
+  -webkit-user-select: text;
+  cursor: text;
+}
 .dsai-msg--user { margin-left: auto; }
 .dsai-msg--assistant { margin-right: auto; }
 .dsai-msg--system { margin: 0 auto; max-width: 80%; }
@@ -206,83 +208,70 @@
   max-height: 100px; overflow-y: auto;
 }
 
-/* ---- session tab bar — text titles + "+" button ---- */
+/* ---- session tab bar — numbered boxes + actions on the right ---- */
 .dsai-tabbar {
   display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  padding: 4px 10px 4px 12px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 12px;
   border-top: 1px solid var(--dsai-border);
   background: var(--dsai-bg);
   flex: none;
-  min-height: 28px;
-  flex-wrap: wrap;
+  min-height: 30px;
 }
 .dsai-conv-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex: 1;
-  display: flex;
   min-width: 0;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 2px;
-}
-.dsai-conv-tabs__list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  align-items: flex-end;
-  width: 100%;
+  overflow-x: auto;
 }
 .dsai-conv-tab {
   position: relative;
-  padding: 4px 8px;
-  max-width: 120px;
-  font-size: 12px;
+  flex: none;
+  width: 30px; height: 24px;
+  display: grid; place-items: center;
+  border: 1px solid var(--dsai-border-strong);
+  border-radius: var(--dsai-radius-sm);
+  background: var(--dsai-bg);
+  font-size: 12px; font-weight: 600;
   color: var(--dsai-text-muted);
   cursor: pointer;
-  white-space: normal;
-  word-break: break-all;
-  line-height: 1.3;
-  border-radius: var(--dsai-radius-sm) var(--dsai-radius-sm) 0 0;
-  transition: .12s;
-  background: transparent;
 }
-.dsai-conv-tab:hover { color: var(--dsai-text); }
+.dsai-conv-tab:hover { background: var(--dsai-bg-2); }
 .dsai-conv-tab.is-active {
+  border-color: var(--dsai-tab-active);
+  border-width: 2px;
   color: var(--dsai-text);
-  font-weight: 600;
 }
-.dsai-conv-tab.is-active::after {
-  content: "";
-  position: absolute;
-  left: 4px; right: 4px; bottom: -4px;
-  height: 2px;
-  background: var(--dsai-tab-active);
-  border-radius: 2px;
-}
+.dsai-conv-tab__num { line-height: 1; }
 .dsai-conv-tab__close {
-  display: none;
   position: absolute;
-  top: 2px; right: 4px;
-  font-size: 12px;
+  top: -4px; right: -4px;
+  width: 14px; height: 14px;
+  display: none;
+  align-items: center; justify-content: center;
+  font-size: 11px;
+  background: var(--dsai-bg-2);
+  border-radius: 50%;
   color: var(--dsai-text-muted);
-  padding: 0 2px;
-  border-radius: 4px;
 }
-.dsai-conv-tab:hover .dsai-conv-tab__close { display: inline; }
-.dsai-conv-tab__close:hover { color: var(--dsai-error); background: var(--dsai-bg-3); }
+.dsai-conv-tab:hover .dsai-conv-tab__close { display: flex; }
+.dsai-conv-tab__close:hover { color: var(--dsai-error); }
 .dsai-conv-tab__plus {
-  padding: 4px 8px;
+  flex: none;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
   font-size: 14px;
   color: var(--dsai-text-muted);
   cursor: pointer;
   border-radius: var(--dsai-radius-sm);
   user-select: none;
-  line-height: 1.2;
 }
 .dsai-conv-tab__plus:hover { color: var(--dsai-text); background: var(--dsai-bg-2); }
 
-.dsai-tabbar__actions { display: flex; gap: 2px; align-items: center; }
+.dsai-tabbar__actions { display: flex; gap: 2px; align-items: center; flex: none; }
 .dsai-tabbar__btn {
   width: 26px; height: 26px;
   display: grid; place-items: center;
@@ -401,8 +390,32 @@
   left: 14px;
 }
 
-/* ---- bottom stats bar ---- */
-.dsai-statsbar { display: none; }
+/* ---- bottom stats bar (backlinks / edit / words / chars / eye) ---- */
+.dsai-statsbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 6px;
+  font-size: 11px;
+  color: var(--dsai-text-muted);
+  background: var(--dsai-bg-2);
+  flex: none;
+  border-top: 1px solid var(--dsai-border);
+}
+.dsai-statsbar__btn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: var(--dsai-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--dsai-radius-sm);
+}
+.dsai-statsbar__btn:hover { color: var(--dsai-text); background: var(--dsai-bg-3); }
+.dsai-statsbar__backlinks { white-space: nowrap; }
+.dsai-statsbar__words,
+.dsai-statsbar__chars { white-space: nowrap; }
 
 /* ---- input bar wrapper + send button ---- */
 .dsai-input-bar {
@@ -413,3 +426,102 @@
 .dsai-send-btn {
   display: none; /* hidden in Claudian design — Enter to send */
 }
+
+/* ---- approval modal — tool call confirmation ---- */
+.deepseek-approval {
+  padding: 16px 18px 14px;
+  min-width: 380px;
+  max-width: 520px;
+}
+.deepseek-approval__head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.deepseek-approval__head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+.deepseek-approval__close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.deepseek-approval__close:hover { background: var(--background-modifier-hover); }
+
+.deepseek-approval__tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+.deepseek-approval__tool-name {
+  font-family: var(--font-monospace);
+  color: var(--text-normal);
+  font-weight: 500;
+}
+.deepseek-approval__risk {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+.deepseek-approval__risk.is-read_only   { color: var(--text-muted);  background: var(--background-modifier-border); }
+.deepseek-approval__risk.is-edit_safe   { color: #2563eb;            background: rgba(37,99,235,.15); }
+.deepseek-approval__risk.is-edit_danger { color: var(--color-orange); background: rgba(245,158,11,.15); }
+.deepseek-approval__risk.is-external    { color: var(--color-red);    background: rgba(239,68,68,.15); }
+
+.deepseek-approval__label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.deepseek-approval__code {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0 0 14px 0;
+}
+.deepseek-approval__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.deepseek-approval__btn {
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.deepseek-approval__btn--deny {
+  background: var(--color-red);
+  color: #fff;
+}
+.deepseek-approval__btn--deny:hover { background: #dc2626; }
+.deepseek-approval__btn--allow {
+  background: #8b5cf6;
+  color: #fff;
+}
+.deepseek-approval__btn--allow:hover { background: #7c3aed; }

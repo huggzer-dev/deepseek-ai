@@ -138,16 +138,18 @@
     background: var(--dsai-border-strong); border-radius: 3px;
   }
   .dsai-empty {
-    margin: auto 0;
+    margin: auto;
     color: var(--dsai-text-muted);
     font-size: 13px;
-    text-align: right;
+    text-align: center;
     padding: 8px 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   .dsai-msg { display: flex; flex-direction: column; max-width: 92%; }
+  .dsai-msg .dsai-bubble {
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+  }
   .dsai-msg--user { margin-left: auto; }
   .dsai-msg--assistant { margin-right: auto; }
   .dsai-msg--system { margin: 0 auto; max-width: 80%; }
@@ -290,17 +292,21 @@
     width: 100%;
   }
   .dsai-conv-tab {
-    position: relative;
-    padding: 4px 8px;
-    max-width: 120px;
-    font-size: 12px;
+    flex: none;
+    width: 30px; height: 24px;
+    display: grid; place-items: center;
+    border: 1px solid var(--dsai-border-strong);
+    border-radius: var(--dsai-radius-sm);
+    background: var(--dsai-bg);
+    font-size: 12px; font-weight: 600;
     color: var(--dsai-text-muted);
     cursor: pointer;
-    white-space: normal;
-    word-break: break-all;
-    line-height: 1.3;
-    border-radius: var(--dsai-radius-sm) var(--dsai-radius-sm) 0 0;
-    background: transparent;
+  }
+  .dsai-conv-tab:hover { background: var(--dsai-bg-2); }
+  .dsai-conv-tab.is-active {
+    border-color: var(--dsai-tab-active);
+    border-width: 2px;
+    color: var(--dsai-text);
   }
   .dsai-conv-tab:hover { color: var(--dsai-text); }
   .dsai-conv-tab.is-active {
@@ -441,6 +447,103 @@
     text-align: center;
     margin-top: 4px;
   }
+
+  /* approval modal — tool call confirmation (Panel 4) */
+  .deepseek-approval {
+    margin: 8px 0 0;
+    padding: 16px 18px 14px;
+    background: #fff;
+    border: 1px solid var(--dsai-border);
+    border-radius: var(--dsai-radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  }
+  .deepseek-approval__head {
+    display: flex; align-items: center;
+    margin-bottom: 12px;
+  }
+  .deepseek-approval__head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dsai-text);
+  }
+  .deepseek-approval__close {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--dsai-text-muted);
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .deepseek-approval__close:hover { background: var(--dsai-bg-2); }
+
+  .deepseek-approval__tool {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .deepseek-approval__tool-name {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--dsai-text);
+    font-weight: 500;
+  }
+  .deepseek-approval__risk {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .4px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    text-transform: uppercase;
+  }
+  .deepseek-approval__risk.is-read_only   { color: var(--dsai-text-muted);  background: var(--dsai-bg-2); }
+  .deepseek-approval__risk.is-edit_safe   { color: #2563eb;                background: rgba(37,99,235,.15); }
+  .deepseek-approval__risk.is-edit_danger { color: #f59e0b;                background: rgba(245,158,11,.15); }
+  .deepseek-approval__risk.is-external    { color: var(--dsai-error);       background: rgba(239,68,68,.15); }
+
+  .deepseek-approval__label {
+    font-size: 12px;
+    color: var(--dsai-text-muted);
+    margin-bottom: 4px;
+  }
+  .deepseek-approval__code {
+    background: var(--dsai-bg-2);
+    border: 1px solid var(--dsai-border);
+    border-radius: var(--dsai-radius-sm);
+    padding: 10px 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 0 0 14px 0;
+  }
+  .deepseek-approval__actions {
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .deepseek-approval__btn {
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--dsai-radius-sm);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .deepseek-approval__btn--deny {
+    background: var(--dsai-error);
+    color: #fff;
+  }
+  .deepseek-approval__btn--deny:hover { background: #dc2626; }
+  .deepseek-approval__btn--allow {
+    background: #8b5cf6;
+    color: #fff;
+  }
+  .deepseek-approval__btn--allow:hover { background: #7c3aed; }
 </style>
 </head>
 <body>
@@ -467,7 +570,7 @@
           <div class="dsai-empty">开始与 DeepSeek 对话吧 ✨</div>
         </div>
         <div class="dsai-tabbar">
-          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab is-active"><span class="dsai-conv-tab__num">1</span></div></div></div>
           <div class="dsai-tabbar__actions">
             <button class="dsai-tabbar__btn" title="edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -482,18 +585,21 @@
           <div class="dsai-selection-counter"></div>
           <textarea class="dsai-textarea" id="t-empty" placeholder="How can I help you today?"></textarea>
           <div class="dsai-statusbar">
-            <button class="dsai-statusbar__chip is-accent" data-action="model">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Sonnet
-            </button>
             <button class="dsai-statusbar__chip" data-action="effort">Effort: High</button>
             <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </button>
-            <div class="dsai-statusbar__spacer"></div>
-            <button class="dsai-toggle is-on" data-action="yolo">
-              <span>YOLO</span>
-              <span class="dsai-toggle__switch"></span>
+            
+          </div>
+          <div class="dsai-statsbar">
+            <span class="dsai-statsbar__backlinks">0 反向链接</span>
+            <button class="dsai-statsbar__btn" title="edit">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <span class="dsai-statsbar__words">1 个词</span>
+            <span class="dsai-statsbar__chars">27 个字符</span>
+            <button class="dsai-statsbar__btn" title="hide">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
           </div>
         </div>
@@ -539,7 +645,7 @@
           </div>
         </div>
         <div class="dsai-tabbar">
-          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab"><span class="dsai-conv-tab__num">1</span></div><div class="dsai-conv-tab is-active"><span class="dsai-conv-tab__num">2</span></div><div class="dsai-conv-tab"><span class="dsai-conv-tab__num">3</span></div></div></div>
           <div class="dsai-tabbar__actions">
             <button class="dsai-tabbar__btn" title="edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -562,18 +668,21 @@
           </div>
           <textarea class="dsai-textarea" placeholder="How can I help you today?"></textarea>
           <div class="dsai-statusbar">
-            <button class="dsai-statusbar__chip is-accent" data-action="model">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Sonnet
-            </button>
             <button class="dsai-statusbar__chip" data-action="effort">Effort: High</button>
             <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </button>
-            <div class="dsai-statusbar__spacer"></div>
-            <button class="dsai-toggle is-on" data-action="yolo">
-              <span>YOLO</span>
-              <span class="dsai-toggle__switch"></span>
+            
+          </div>
+          <div class="dsai-statsbar">
+            <span class="dsai-statsbar__backlinks">0 反向链接</span>
+            <button class="dsai-statsbar__btn" title="edit">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <span class="dsai-statsbar__words">1 个词</span>
+            <span class="dsai-statsbar__chars">27 个字符</span>
+            <button class="dsai-statsbar__btn" title="hide">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
           </div>
         </div>
@@ -607,7 +716,7 @@
           </div>
         </div>
         <div class="dsai-tabbar">
-          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab"><span class="dsai-conv-tab__num">1</span></div><div class="dsai-conv-tab"><span class="dsai-conv-tab__num">2</span></div><div class="dsai-conv-tab is-active"><span class="dsai-conv-tab__num">3</span></div></div></div>
           <div class="dsai-tabbar__actions">
             <button class="dsai-tabbar__btn" title="edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -622,23 +731,96 @@
           <div class="dsai-selection-counter"></div>
           <textarea class="dsai-textarea" id="t-error" placeholder="How can I help you today?"></textarea>
           <div class="dsai-statusbar">
-            <button class="dsai-statusbar__chip is-accent" data-action="model">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Sonnet
-            </button>
             <button class="dsai-statusbar__chip" data-action="effort">Effort: Med</button>
             <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </button>
-            <div class="dsai-statusbar__spacer"></div>
-            <button class="dsai-toggle" data-action="yolo">
-              <span>YOLO</span>
-              <span class="dsai-toggle__switch"></span>
+            
+          </div>
+          <div class="dsai-statsbar">
+            <span class="dsai-statsbar__backlinks">0 反向链接</span>
+            <button class="dsai-statsbar__btn" title="edit">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <span class="dsai-statsbar__words">1 个词</span>
+            <span class="dsai-statsbar__chars">27 个字符</span>
+            <button class="dsai-statsbar__btn" title="hide">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
           </div>
         </div>
       </div>
       <div class="panel__hint">在 textarea 中输入文字模拟填写</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- Panel 4: approval modal (only EXTERNAL needs approval) -->
+    <!-- ====================================================== -->
+    <div class="panel">
+      <div class="panel__label">状态 4 · 工具调用审批</div>
+      <div class="panel__desc">仅 EXTERNAL 类型需弹审批；仓库内写入免审批</div>
+      <div class="plugin-frame" style="height: auto; min-height: 720px;">
+        <div class="dsai-brand">
+          <span class="dsai-brand__icon">◆</span>
+          <span class="dsai-brand__name">deepseek-ai</span>
+        </div>
+        <div class="dsai-messages">
+          <div class="dsai-empty">开始与 DeepSeek 对话吧 ✨</div>
+        </div>
+        <div class="dsai-tabbar">
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tab is-active"><span class="dsai-conv-tab__num">1</span></div></div>
+          <div class="dsai-tabbar__actions">
+            <button class="dsai-tabbar__btn" title="new chat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="dsai-tabbar__btn" title="history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 12 1 12 1 20 9 20"/><path d="M3.51 9a9 9 0 1 0 2.13-3.36L1 10"/><polyline points="12 7 12 12 15 15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="dsai-input-section">
+          <div class="dsai-attachments"></div>
+          <div class="dsai-selection-counter"></div>
+          <textarea class="dsai-textarea" placeholder="How can I help you today?"></textarea>
+          <div class="dsai-statusbar">
+            <button class="dsai-statusbar__chip" data-action="effort">Effort: High</button>
+            <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+          </div>
+          <div class="dsai-statsbar">
+            <span class="dsai-statsbar__backlinks">0 反向链接</span>
+            <button class="dsai-statsbar__btn" title="edit">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <span class="dsai-statsbar__words">1 个词</span>
+            <span class="dsai-statsbar__chars">27 个字符</span>
+            <button class="dsai-statsbar__btn" title="hide">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="deepseek-approval" id="approval-demo">
+          <div class="deepseek-approval__head">
+            <h2>工具调用需要确认</h2>
+            <button class="deepseek-approval__close" type="button">×</button>
+          </div>
+          <div class="deepseek-approval__tool">
+            <span class="deepseek-approval__tool-name">Toolwrite_file</span>
+            <span class="deepseek-approval__risk is-edit_danger">EDIT_DANGER</span>
+          </div>
+          <div class="deepseek-approval__label">Arguments</div>
+          <pre class="deepseek-approval__code">{
+  "path": "/notes/Java学习课程指南.md",
+  "content": "# Java 学习课程指南\n\n> 整理时间：2025年\n\n----\n"
+}</pre>
+          <div class="deepseek-approval__actions">
+            <button class="deepseek-approval__btn deepseek-approval__btn--deny" type="button">拒绝</button>
+            <button class="deepseek-approval__btn deepseek-approval__btn--allow" type="button">允许</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel__hint">仓库内写入（EDIT_DANGER）现已免审批；仅 EXTERNAL 会弹</div>
     </div>
 
   </div>

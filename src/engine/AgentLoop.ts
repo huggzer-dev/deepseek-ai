@@ -95,7 +95,7 @@ export class AgentLoop {
         const tool = this.registry.get(tc.function.name);
         const riskLevel = tool?.riskLevel ?? 0;
 
-        yield { type: "tool_call", id: tc.id, name: tc.function.name, args, riskLevel, requiresApproval: riskLevel >= 2 };
+        yield { type: "tool_call", id: tc.id, name: tc.function.name, args, riskLevel, requiresApproval: riskLevel === 3 };
 
         if (!tool) {
           const errMsg: Message = { role: "tool", tool_call_id: tc.id, name: tc.function.name, content: "error: unknown tool" };
@@ -104,8 +104,9 @@ export class AgentLoop {
           continue;
         }
 
-        // Approval gate for EDIT_DANGER / EXTERNAL
-        if (riskLevel >= 2 && !ctx.aborted) {
+        // Approval gate — only EXTERNAL (network / shell) needs confirmation.
+        // Vault-internal writes (EDIT_DANGER) run without prompting.
+        if (riskLevel === 3 && !ctx.aborted) {
           const ok = await new ApprovalModal(this.app, { tool: tool.name, args, riskLevel }, this.settings.language).pick();
           if (!ok) {
             const denied: Message = { role: "tool", tool_call_id: tc.id, name: tool.name, content: "user denied this tool call" };

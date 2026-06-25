@@ -10,21 +10,22 @@ import type { Message, ToolContext, ContextInput } from "../types";
 import { setIcon } from "obsidian";
 
 /**
- * Owns the chat sidebar with a Claudian-style layout:
+ * Owns the chat sidebar:
  *
  *   ┌─────────────────────────────────────────┐
- *   │ ✦ deepseek-ai                             │ ← brand bar
+ *   │ ◆ deepseek-ai                             │ brand
  *   ├─────────────────────────────────────────┤
  *   │                                          │
- *   │ messages (user right, assistant left)    │
+ *   │ messages (centered empty state)          │
  *   │                                          │
  *   ├─────────────────────────────────────────┤
- *   │ [1] [2] [3*]                  [✏] [↻]   │ ← tab bar
+ *   │ [1] [2] [3] [+]              [✏] [↻]   │ tabs · actions right
  *   ├─────────────────────────────────────────┤
  *   │ ┌─ chips · selected ──────────────┐    │
  *   │ │ textarea                         │    │
  *   │ └──────────────────────────────────┘    │
- *   │ Sonnet  Effort: High  📁      [YOLO]     │ ← status row
+ *   │ ⚡ Effort: High  📁                     │ status row
+ *   │ 0 条反向链接  ✏  27 个词  166 个字符 👁 │ stats bar
  *   └─────────────────────────────────────────┘
  */
 export class ChatPanel {
@@ -32,10 +33,10 @@ export class ChatPanel {
   private tabBarEl!: HTMLElement;
   private inputSectionEl!: HTMLElement;
   private tabsEl!: HTMLElement;
+  private statsbarEl!: HTMLElement;
   private tabs: ConversationTabs | undefined;
   private inputBar: InputBar | undefined;
   private effortBtn: HTMLButtonElement | undefined;
-  private yoloToggle: HTMLButtonElement | undefined;
   private bubbles: MessageBubble[] = [];
   private abortController: AbortController | undefined;
   private lastUserPayload: ParsedInput | undefined;
@@ -60,9 +61,11 @@ export class ChatPanel {
 
     this.inputBar = new InputBar(this.app, this.inputSectionEl, this.plugin, (p) => {
       void this.onSend(p);
-    });
+    }, () => this.refreshStats());
 
     this.renderStatusRow(this.inputSectionEl);
+    this.renderStatsBar(this.inputSectionEl);
+    this.statsbarEl = this.inputSectionEl.querySelector(".dsai-statsbar") as HTMLElement;
 
     this.refreshSession();
 
@@ -91,44 +94,65 @@ export class ChatPanel {
 
   private renderTabBarActions(): void {
     const actions = this.tabBarEl.createDiv({ cls: "dsai-tabbar__actions" });
-    const editBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "edit" } });
+    // Edit button → start a fresh conversation
+    const editBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "new chat" } });
     setIcon(editBtn, "square-pen");
-    editBtn.addEventListener("click", () => this.onReset());
+    editBtn.addEventListener("click", () => this.onNewChat());
+    // History button → reload the session list
     const histBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "history" } });
     setIcon(histBtn, "history");
-    histBtn.addEventListener("click", () => this.onReset());
+    histBtn.addEventListener("click", () => this.refreshSession());
   }
 
-  // --- status row (model + effort + folder + YOLO) -------------------------
+  // --- status row (Effort + folder) and stats bar ------------------------
 
   private renderStatusRow(parent: HTMLElement): void {
-    const bar = parent.createDiv({ cls: "dsai-statusbar" });
     const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
 
-    const sonnet = bar.createEl("button", { cls: "dsai-statusbar__chip is-accent", text: t("ui.sonnet") });
-    setIcon(sonnet, "zap");
-    sonnet.addEventListener("click", () => this.cycleModel());
+    const bar = parent.createDiv({ cls: "dsai-statusbar" });
 
-    this.effortBtn = bar.createEl("button", { cls: "dsai-statusbar__chip", text: `${t("ui.effort")}: ${this.effortLabel()}` });
-    this.effortBtn.addEventListener("click", () => this.cycleEffort());
+    const effort = bar.createEl("button", { cls: "dsai-statusbar__chip", text: `${t("ui.effort")}: ${this.effortLabel()}` });
+    setIcon(effort, "zap");
+    this.effortBtn = effort;
+    effort.addEventListener("click", () => this.cycleEffort());
 
     const folder = bar.createEl("button", { cls: "dsai-statusbar__chip", attr: { "aria-label": "attach" } });
     setIcon(folder, "folder");
     folder.addEventListener("click", () => this.inputBar?.focus());
+  }
 
-    const spacer = bar.createDiv({ cls: "dsai-statusbar__spacer" });
+  /** Bottom stats bar — backlinks / word / char counts with eye toggle. */
+  private renderStatsBar(parent: HTMLElement): void {
+    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
+    const bar = parent.createDiv({ cls: "dsai-statsbar" });
+    bar.createSpan({ cls: "dsai-statsbar__backlinks", text: `0 ${t("ui.links")}` });
+    const editBtn = bar.createEl("button", { cls: "dsai-statsbar__btn" });
+    setIcon(editBtn, "square-pen");
+    const stats = this.currentInputStats();
+    bar.createSpan({ cls: "dsai-statsbar__words", text: `${stats.words} ${t("ui.words")}` });
+    bar.createSpan({ cls: "dsai-statsbar__chars", text: `${stats.chars} ${t("ui.chars")}` });
+    const eyeBtn = bar.createEl("button", { cls: "dsai-statsbar__btn" });
+    setIcon(eyeBtn, "eye-off");
+    void editBtn;
+    void eyeBtn;
+  }
 
-    this.yoloToggle = bar.createEl("button", {
-      cls: `dsai-toggle${this.plugin.settings.yolo ? " is-on" : ""}`,
-      attr: { "aria-label": "yolo" },
-    });
-    const yoloLabel = this.yoloToggle.createSpan({ text: t("ui.yolo") });
-    void yoloLabel;
-    this.yoloToggle.createDiv({ cls: "dsai-toggle__switch" });
-    this.yoloToggle.addEventListener("click", () => this.toggleYolo());
+  private currentInputStats(): { words: number; chars: number } {
+    const text = this.inputBar?.value() ?? "";
+    const chars = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    return { words, chars };
+  }
 
-    bar.appendChild(spacer);
-    bar.appendChild(this.yoloToggle);
+  /** Called by InputBar on every keystroke to refresh word/char counts. */
+  private refreshStats(): void {
+    if (!this.statsbarEl) return;
+    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
+    const stats = this.currentInputStats();
+    const w = this.statsbarEl.querySelector(".dsai-statsbar__words");
+    const c = this.statsbarEl.querySelector(".dsai-statsbar__chars");
+    if (w) w.textContent = `${stats.words} ${t("ui.words")}`;
+    if (c) c.textContent = `${stats.chars} ${t("ui.chars")}`;
   }
 
   // --- messages + sessions -------------------------------------------------
@@ -178,43 +202,23 @@ export class ChatPanel {
     this.refreshSession();
   }
 
-  private onReset(): void {
+  /** Start a brand-new conversation (keeps the old one in history). */
+  private onNewChat(): void {
     this.abortController?.abort();
-    const old = this.plugin.sessions.activeSession();
-    const oldId = old?.id;
-    if (oldId) this.plugin.sessions.delete(oldId);
     this.plugin.sessions.create();
     this.refreshSession();
-    if (oldId) void this.plugin.store.delete(oldId).catch(() => {});
   }
 
-  // --- settings actions (model / effort / yolo) ---------------------------
-
-  private async cycleModel(): Promise<void> {
-    const models = ["deepseek-v4-flash", "deepseek-v4-pro"] as const;
-    const i = models.indexOf(this.plugin.settings.model as (typeof models)[number]);
-    this.plugin.settings.model = models[(i + 1) % models.length]!;
-    await this.plugin.saveSettings();
-    this.render();
-  }
+  // --- settings actions (effort only — Sonnet / YOLO removed per design) -
 
   private async cycleEffort(): Promise<void> {
     const order = ["low", "medium", "high"] as const;
     const i = order.indexOf(this.plugin.settings.effort);
     this.plugin.settings.effort = order[(i + 1) % order.length]!;
     await this.plugin.saveSettings();
-    if (this.effortBtn) this.effortBtn.textContent = `${translate(this.plugin.settings.language, "ui.effort")}: ${this.effortLabel()}`;
-  }
-
-  private async toggleYolo(): Promise<void> {
-    this.plugin.settings.yolo = !this.plugin.settings.yolo;
-    if (this.plugin.settings.yolo) {
-      this.plugin.settings.autoApproveRisk = 99 as import("../types").RiskLevel;
-    } else {
-      this.plugin.settings.autoApproveRisk = 0; // RiskLevel.READ_ONLY
+    if (this.effortBtn) {
+      this.effortBtn.textContent = `${translate(this.plugin.settings.language, "ui.effort")}: ${this.effortLabel()}`;
     }
-    await this.plugin.saveSettings();
-    this.render();
   }
 
   private effortLabel(): string {

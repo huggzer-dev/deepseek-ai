@@ -1,0 +1,32 @@
+{
+  "name": "deepseek-ai",
+  "version": "0.1.0",
+  "description": "deepseek-ai for obsidian",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "lint": "tsc -noEmit -skipLibCheck"
+  },
+  "keywords": [
+    "obsidian",
+    "deepseek",
+    "ai",
+    "agent"
+  ],
+  "author": "huggzer-dev",
+  "license": "MIT",
+  "homepage": "https://github.com/huggzer-dev/deepseek-ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/huggzer-dev/deepseek-ai.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "builtin-modules": "^5.2.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "typescript": "^5.7.0"
+  }
+}

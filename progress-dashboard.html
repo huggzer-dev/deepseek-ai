@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DeepSeek Obsidian Plugin · 进度看板</title>
+<style>
+  :root {
+    --bg:        #0f1117;
+    --card:      #171a23;
+    --card-2:    #1e2230;
+    --border:    #2a2f3d;
+    --text:      #e6e8ee;
+    --muted:     #8b93a7;
+    --accent:   #6366f1;
+    --accent-2: #818cf8;
+    --ok:       #10b981;
+    --warn:     #f59e0b;
+    --pending:  #475569;
+    --shadow:   0 6px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #1c2030 0%, transparent 60%), var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 18px 80px; }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .logo {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; font-size: 24px; box-shadow: var(--shadow);
+  }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .3px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .top-stats { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+  .ring { --p: 0; width: 84px; height: 84px; border-radius: 50%;
+    background:
+      conic-gradient(var(--accent) calc(var(--p) * 1%), var(--card-2) 0);
+    display: grid; place-items: center; box-shadow: var(--shadow);
+  }
+  .ring::before { content: ""; width: 64px; height: 64px; border-radius: 50%; background: var(--bg); }
+  .ring span { position: absolute; font-size: 17px; font-weight: 700; }
+  .phase-now { font-size: 13px; color: var(--muted); }
+  .phase-now b { color: var(--text); }
+
+  .toolbar {
+    display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .toolbar button {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 9px; cursor: pointer; font-size: 13px;
+    transition: .15s;
+  }
+  .toolbar button:hover { border-color: var(--accent); }
+
+  .phase {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 14px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .phase-head {
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer;
+    user-select: none;
+  }
+  .phase-head:hover { background: var(--card-2); }
+  .phase-idx {
+    width: 28px; height: 28px; border-radius: 8px; flex: none;
+    display: grid; place-items: center; font-weight: 700; font-size: 13px;
+    background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  }
+  .phase[data-state="done"]   .phase-idx { background: var(--ok); color: #06231a; border-color: transparent; }
+  .phase[data-state="active"] .phase-idx { background: var(--accent); color: #fff; border-color: transparent; }
+  .phase-title { font-weight: 600; font-size: 15px; }
+  .phase-meta  { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  .phase-bar { flex: 1; height: 6px; background: var(--card-2); border-radius: 99px; max-width: 220px; margin-left: auto; overflow: hidden; }
+  .phase-bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s; }
+  .phase-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chev { color: var(--muted); transition: transform .2s; }
+  .phase.open .chev { transform: rotate(90deg); }
+
+  .tasks { display: none; padding: 4px 14px 14px; border-top: 1px solid var(--border); }
+  .phase.open .tasks { display: block; }
+  .task {
+    display: flex; align-items: flex-start; gap: 12px; padding: 11px 6px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .task:last-child { border-bottom: none; }
+  .task input[type=checkbox] {
+    appearance: none; width: 20px; height: 20px; border-radius: 6px;
+    border: 1.5px solid var(--border); background: var(--bg); cursor: pointer;
+    flex: none; margin-top: 1px; position: relative; transition: .15s;
+  }
+  .task input[type=checkbox]:checked { background: var(--ok); border-color: transparent; }
+  .task input[type=checkbox]:checked::after {
+    content: "✓"; position: absolute; inset: 0; display: grid; place-items: center;
+    color: #06231a; font-size: 13px; font-weight: 700;
+  }
+  .task-body { flex: 1; min-width: 0; }
+  .task-name { font-size: 14px; }
+  .task.done .task-name { text-decoration: line-through; color: var(--muted); }
+  .task-note { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .tag {
+    font-size: 10px; padding: 2px 7px; border-radius: 99px; margin-left: 6px;
+    border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+  }
+  .tag.done { background: rgba(16,185,129,.15); color: var(--ok); border-color: transparent; }
+  .tag.active { background: rgba(99,102,241,.18); color: var(--accent-2); border-color: transparent; }
+
+  .deliverable {
+    margin-top: 10px; padding: 10px 12px; border-radius: 9px;
+    background: var(--card-2); font-size: 12px; color: var(--muted);
+    border-left: 3px solid var(--accent);
+  }
+  .deliverable b { color: var(--text); }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 28px; }
+  @media (max-width: 560px) {
+    .phase-bar { display: none; }
+    .top-stats { margin-left: 0; width: 100%; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">✦</div>
+    <div>
+      <h1>DeepSeek Obsidian Plugin</h1>
+      <div class="sub">深度求索 · Obsidian 智能笔记助手 · 进度看板</div>
+    </div>
+    <div class="top-stats">
+      <div>
+        <div class="phase-now">当前阶段 · <b id="phaseName">—</b></div>
+        <div class="sub" id="phaseSummary">—</div>
+      </div>
+      <div class="ring" id="ring"><span id="ringPct">0%</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="btnExpand">展开全部</button>
+    <button id="btnCollapse">折叠全部</button>
+    <button id="btnReset">重置进度</button>
+    <button id="btnExport">导出 JSON</button>
+  </div>
+
+  <div id="phases"></div>
+
+  <footer>
+    进度自动保存于浏览器 localStorage · 仅供开发跟踪使用
+  </footer>
+</div>
+
+<script>
+const PHASES = [
+  {
+    id: 0, name: "Phase 0 · 脚手架 + 骨架", state: "active",
+    summary: "搭建项目结构，生成所有空模块 + 接口定义，插件可被 Obsidian 加载",
+    deliverable: "可交付：Obsidian 中安装本地插件后能加载并看到空对话面板",
+    tasks: [
+      ["项目脚手架初始化 (package.json, tsconfig, esbuild)", "配置 pnpm + esbuild + TS strict", ""],
+      ["Obsidian 清单文件 (manifest.json, versions.json)", "插件 ID = deepseek-ai，支持移动端", ""],
+      ["全局样式表 styles.css", "消息气泡 / 工具卡片 / 输入栏样式", ""],
+      ["全局类型定义 src/types.ts", "Settings / Message / Tool / AgentEvent 接口", ""],
+      ["插件入口 src/main.ts", "注册 View / 命令 / SettingsTab", ""],
+      ["设置面板 SettingsTab", "API Key / 模型 / 温度 等配置 UI", ""],
+      ["LLM 适配层 (Provider + StreamParser + TokenCounter)", "DeepSeek API 流式调用契约", ""],
+      ["Agent 引擎层 (AgentLoop / Session / ContextBuilder)", "ReAct 循环 + 上下文构建骨架", ""],
+      ["Tool 系统 (Registry + vault/editor/external)", "5 + 4 + 2 个工具空实现与风险等级", ""],
+      ["UI 层 (ChatView/ChatPanel/InputBar 等)", "原生 Obsidian DOM API 构建聊天界面", ""],
+      ["Storage 层 (ConversationStore / SettingStore)", "PluginData 持久化骨架", ""],
+      ["i18n + utils (logger/path/EventEmitter/debounce)", "中英文文案 + 轻量工具", ""],
+      ["进度看板 progress-dashboard.html", "本文件，localStorage 持久化勾选状态", ""],
+      ["安装依赖并验证构建", "pnpm install + pnpm run build 通过", ""],
+    ],
+  },
+  {
+    id: 1, name: "Phase 1 · 基础对话", state: "active",
+    summary: "配置 API Key 后能在侧边栏和 DeepSeek 流式对话（代码已完成，待真机验证）",
+    deliverable: "可交付：在 Obsidian 侧边栏与 DeepSeek 对话，单会话持久化",
+    tasks: [
+      ["SettingsTab 联动真实写入", "设置改动实时保存到 PluginData", "已完成"],
+      ["DeepSeekProvider 实现流式 chat", "fetch + ReadableStream + SSE 解析", "已完成"],
+      ["ChatView/ChatPanel 渲染消息", "MarkdownRenderer 渲染 assistant 消息", "已完成"],
+      ["InputBar 发送消息接入", "Enter 发送 / Shift+Enter 换行", "已完成"],
+      ["消息流式渲染", "实时增量插入到消息气泡", "已完成"],
+      ["单会话持久化", "ConversationStore 保存/加载 1 个会话", "已完成"],
+      ["异常处理与提示", "API Key 缺失 / 网络错误的 Notice", "已完成"],
+      ["minAppVersion 兼容性验证", "桌面 + 移动端加载成功", "待真机验证"],
+      ["Phase 1 自测清单与确认", "在真机 Obsidian 中跑通对话", "待真机验证"],
+    ],
+  },
+  {
+    id: 2, name: "Phase 2 · Agent + Tool 系统", state: "active",
+    summary: "DeepSeek 能读取/编辑你的 Vault（代码已完成，待真机验证）",
+    deliverable: "可交付：AI 通过工具读取/搜索笔记，工具调用卡片可见，写入需审批",
+    tasks: [
+      ["ToolRegistry 注册并调度工具", "按名称解析并执行", "已完成"],
+      ["实现核心 Vault Tools (read/search/list)", "ReadFile / SearchVault / ListDir 真实实现", "已完成"],
+      ["实现 Editor Tools (selection/active)", "GetSelection / GetActiveNote", "已完成"],
+      ["实现 Write/Edit (危险工具)", "WriteFile / EditFile 已接入审批", "已完成"],
+      ["AgentLoop ReAct 循环落地", "解析 tool_calls → 执行 → 回注 → 再循环", "已完成"],
+      ["Tool Call 安全审批弹窗", "ApprovalModal (EDIT_DANGER / EXTERNAL)", "已完成"],
+      ["ToolCallBubble 渲染", "工具名 / 参数 / 结果预览 / 风险标签", "已完成"],
+      ["ToolResult 截断策略", "默认 4000 token 截断 + [truncated] 标记", "已完成"],
+      ["多轮对话历史传递", "保留 system + 完整历史", "已完成"],
+      ["Phase 2 自测清单与确认", "在真机验证 Agent 能读 Vault", "待真机验证"],
+    ],
+  },
+  {
+    id: 3, name: "Phase 3 · 编辑能力 + 上下文增强", state: "active",
+    summary: "AI 能编辑笔记内容，选中文本直接改（代码已完成，待真机验证）",
+    deliverable: "可交付：InlineEdit diff 预览 + $/@/# 上下文注入",
+    tasks: [
+      ["EditFile / WriteFile 真实实现", "精确替换 + 创建/覆盖 (Phase 2)", "已完成"],
+      ["ReplaceSelection / InsertAtCursor 落地", "编辑器写入并支持撤销 (Phase 2)", "已完成"],
+      ["InlineEditModal + Diff 预览", "选中文本 → AI 修改 → LCS diff 确认", "已完成"],
+      ["@mention 文件模糊搜索", "MentionSuggest 下拉 + 注入文件内容 (Phase 1)", "已完成"],
+      ["ContextBuilder 注入当前文件/选区", "活跃笔记自动进 ToolContext", "已完成"],
+      ["$ 技能模板加载", "SkillLoader 读取 .deepseek/skills/*.md", "已完成"],
+      ["种子内置 5 个 Skill 模板", "summarize/translate/outline/brainstorm/review", "已完成"],
+      ["# Instruction Mode", "# 触发本次对话额外指令", "已完成"],
+      ["Phase 3 自测清单与确认", "真机验证内联编辑与上下文引用", "待真机验证"],
+    ],
+  },
+  {
+    id: 4, name: "Phase 4 · 多会话 + 高级功能 + 上架", state: "active",
+    summary: "完整对标高级体验并准备社区市场上架（代码已完成，待真机验证）",
+    deliverable: "可交付：多标签对话 + Plan Mode + Vision + MCP + i18n + 可发布到社区市场",
+    tasks: [
+      ["多标签对话管理", "ConversationTabs + SessionManager 联动", "已完成"],
+      ["对话分叉 (Fork)", "从任意消息分叉新会话 (SessionManager.fork)", "已完成"],
+      ["Plan Mode (Shift+Tab)", "system prompt + model 切换 + approval 流", "已完成"],
+      ["图片附件支持 (vision)", "拖放/粘贴图片 → base64 → VisionContent", "已完成"],
+      ["i18n 运行时切换", "设置变更语言 → _onLangChange → ChatPanel 重渲染", "已完成"],
+      ["MCP Client (stdio/HTTP)", "MCPClient + MCPToolAdapter + MCPManager", "已完成"],
+      ["README 完善", "安装/功能/设置/架构说明", "已完成"],
+      ["社区市场上架准备", "GitHub Release + 提交 PR 到 obsidian-releases", "待人工操作"],
+      ["Phase 4 自测清单与最终确认", "发布前完整功能验证", "待真机验证"],
+    ],
+  },
+];
+
+const STORAGE_KEY = "dsai-progress-v1";
+let state = load();
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const tasks = saved.tasks || {};
+    const phases = PHASES.map((p) => {
+      const done = (tasks[p.id] || []).filter(Boolean).length;
+      return { ...p, open: saved.open?.[p.id] ?? (p.id === 0) };
+    });
+    return { phases, _ts: saved._ts || Date.now() };
+  } catch { return { phases: PHASES.map(p => ({ ...p, open: p.id === 0 })) }; }
+}
+
+function save() {
+  const tasks = {};
+  state.phases.forEach((p) => {
+    tasks[p.id] = p.taskStates.map(Boolean);
+  });
+  const open = {};
+  state.phases.forEach((p) => { open[p.id] = p.open; });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, open, _ts: Date.now() }));
+}
+
+function pctOf(phase) {
+  if (!phase.taskStates || !phase.taskStates.length) return 0;
+  const done = phase.taskStates.filter(Boolean).length;
+  return Math.round((done / phase.taskStates.length) * 100);
+}
+
+function overallPct() {
+  const total = state.phases.reduce((s, p) => s + p.tasks.length, 0);
+  const done = state.phases.reduce((s, p) => s + p.taskStates.filter(Boolean).length, 0);
+  return total ? Math.round((done / total) * 100) : 0;
+}
+
+function currentPhase() {
+  const p = state.phases.find((p) => pctOf(p) < 100);
+  return p || state.phases[state.phases.length - 1];
+}
+
+function ensureTaskStates() {
+  state.phases.forEach((p) => {
+    if (!p.taskStates) {
+      // default: tick the box if the embedded note says "已完成"
+      p.taskStates = p.tasks.map((t) => (t[2] || "") === "已完成");
+    }
+    if (p.taskStates.length !== p.tasks.length) {
+      p.taskStates = p.tasks.map((_, i) => !!p.taskStates[i]);
+    }
+  });
+}
+ensureTaskStates();
+
+function render() {
+  const root = document.getElementById("phases");
+  root.innerHTML = "";
+  state.phases.forEach((p, pi) => {
+    const pct = pctOf(p);
+    const done = p.taskStates.filter(Boolean).length;
+    const phaseEl = document.createElement("div");
+    phaseEl.className = "phase" + (p.open ? " open" : "");
+    if (pct === 100) phaseEl.dataset.state = "done";
+    else if (pi === currentPhase().id || p.state === "active") phaseEl.dataset.state = "active";
+    phaseEl.innerHTML =
+      `<div class="phase-head" data-idx="${pi}">
+        <div class="phase-idx">${p.id}</div>
+        <div>
+          <div class="phase-title">${p.name}</div>
+          <div class="phase-meta">${p.summary}</div>
+        </div>
+        <div class="phase-bar"><i style="width:${pct}%"></i></div>
+        <div class="phase-count">${done}/${p.tasks.length} · ${pct}%</div>
+        <div class="chev">▸</div>
+      </div>`;
+
+    const tasks = document.createElement("div");
+    tasks.className = "tasks";
+    p.tasks.forEach((t, ti) => {
+      const isDone = !!p.taskStates[ti];
+      const note = t[2] || (isDone ? "已完成" : "");
+      const taskEl = document.createElement("div");
+      taskEl.className = "task" + (isDone ? " done" : "");
+      taskEl.innerHTML =
+        `<input type="checkbox" data-pi="${pi}" data-ti="${ti}" ${isDone ? "checked" : ""} />
+         <div class="task-body">
+           <div><span class="task-name">${t[0]}</span>
+             <span class="tag ${isDone ? "done" : ""}">${isDone ? "DONE" : (pi === currentPhase().id ? "ACTIVE" : "TODO")}</span>
+           </div>
+           <div class="task-note">${t[1]}${note ? " · " + note : ""}</div>
+         </div>`;
+      tasks.appendChild(taskEl);
+    });
+    const deliv = document.createElement("div");
+    deliv.className = "deliverable";
+    deliv.innerHTML = `<b>交付目标</b>：${p.deliverable}`;
+    tasks.appendChild(deliv);
+
+    phaseEl.appendChild(tasks);
+    root.appendChild(phaseEl);
+  });
+
+  document.querySelectorAll(".phase-head").forEach((h) => {
+    h.addEventListener("click", () => {
+      const i = Number(h.dataset.idx);
+      state.phases[i].open = !state.phases[i].open;
+      save();
+      render();
+    });
+  });
+  document.querySelectorAll('.task input[type=checkbox]').forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const pi = Number(cb.dataset.pi), ti = Number(cb.dataset.ti);
+      state.phases[pi].taskStates[ti] = cb.checked;
+      save();
+      renderStats();
+      render();
+    });
+  });
+  renderStats();
+}
+
+function renderStats() {
+  const pct = overallPct();
+  document.getElementById("ring").style.setProperty("--p", pct);
+  document.getElementById("ringPct").textContent = pct + "%";
+  const cur = currentPhase();
+  document.getElementById("phaseName").textContent = cur.name;
+  const done = cur.taskStates.filter(Boolean).length;
+  document.getElementById("phaseSummary").textContent = `${done}/${cur.tasks.length} · ${pctOf(cur)}%`;
+}
+
+document.getElementById("btnExpand").onclick = () => {
+  state.phases.forEach((p) => (p.open = true)); save(); render();
+};
+document.getElementById("btnCollapse").onclick = () => {
+  state.phases.forEach((p) => (p.open = false)); save(); render();
+};
+document.getElementById("btnReset").onclick = () => {
+  if (!confirm("确定要清空所有进度勾选吗？")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = load(); ensureTaskStates(); save(); render();
+};
+document.getElementById("btnExport").onclick = () => {
+  const blob = new Blob([JSON.stringify({
+    exportedAt: new Date().toISOString(),
+    phases: state.phases.map((p) => ({
+      id: p.id, name: p.name, pct: pctOf(p),
+      done: p.taskStates.filter(Boolean).length, total: p.tasks.length,
+      tasks: p.tasks.map((t, i) => ({ name: t[0], note: t[1], done: !!p.taskStates[i] })),
+    })),
+  }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `deepseek-progress-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+};
+
+save();
+render();
+</script>
+</body>
+</html>

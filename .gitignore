@@ -1,0 +1,40 @@
+# Build outputs
+main.js
+main.js.map
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Hot reload (obsidian-hot-reload plugin)
+hot/
+.hot-reload/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Env / local
+.env
+.env.local
+.env.*.local
+
+# Test vaults (large, user-specific)
+test-vault/
+testvault/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage (if tests are added later)
+coverage/
+.vite/

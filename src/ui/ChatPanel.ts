@@ -13,9 +13,7 @@ import { setIcon } from "obsidian";
  * Owns the chat sidebar with a Claudian-style layout:
  *
  *   ┌─────────────────────────────────────────┐
- *   │ top toolbar (icon row)                    │
- *   ├─────────────────────────────────────────┤
- *   │ brand bar (✦ deepseek-ai)                │
+ *   │ ✦ deepseek-ai                             │ ← brand bar
  *   ├─────────────────────────────────────────┤
  *   │                                          │
  *   │ messages (user right, assistant left)    │
@@ -27,8 +25,6 @@ import { setIcon } from "obsidian";
  *   │ │ textarea                         │    │
  *   │ └──────────────────────────────────┘    │
  *   │ Sonnet  Effort: High  📁      [YOLO]     │ ← status row
- *   ├─────────────────────────────────────────┤
- *   │ 0 links   ✏  1 word  35 chars  👁        │ ← stats
  *   └─────────────────────────────────────────┘
  */
 export class ChatPanel {
@@ -40,7 +36,6 @@ export class ChatPanel {
   private inputBar: InputBar | undefined;
   private effortBtn: HTMLButtonElement | undefined;
   private yoloToggle: HTMLButtonElement | undefined;
-  private statsbarEl!: HTMLElement;
   private bubbles: MessageBubble[] = [];
   private abortController: AbortController | undefined;
   private lastUserPayload: ParsedInput | undefined;
@@ -52,7 +47,6 @@ export class ChatPanel {
     this.root.empty();
     const view = this.root.createDiv({ cls: "deepseek-chat-view" });
 
-    this.renderToolbar(view);
     this.renderBrand(view);
     this.messagesEl = view.createDiv({ cls: "dsai-messages" });
 
@@ -66,11 +60,9 @@ export class ChatPanel {
 
     this.inputBar = new InputBar(this.app, this.inputSectionEl, this.plugin, (p) => {
       void this.onSend(p);
-    }, () => this.renderStats());
+    });
 
     this.renderStatusRow(this.inputSectionEl);
-    this.statsbarEl = view.createDiv({ cls: "dsai-statsbar" });
-    this.renderStats();
 
     this.refreshSession();
 
@@ -83,27 +75,6 @@ export class ChatPanel {
         }
       };
     };
-  }
-
-  // --- top icon toolbar -----------------------------------------------------
-
-  private renderToolbar(view: HTMLElement): void {
-    const bar = view.createDiv({ cls: "dsai-toolbar" });
-    const iconBtns: Array<{ icon: string; tip: string; onClick?: () => void }> = [
-      { icon: "link", tip: "Link note" },
-      { icon: "unlink", tip: "Unlink" },
-      { icon: "tag", tip: "Tags" },
-      { icon: "archive", tip: "Archive" },
-      { icon: "list", tip: "List mode" },
-      { icon: "briefcase", tip: "Workspace" },
-      { icon: "message-square", tip: "New chat" },
-      { icon: "sidebar", tip: "Toggle sidebar" },
-    ];
-    for (const b of iconBtns) {
-      const btn = bar.createEl("button", { cls: "dsai-toolbar__btn", attr: { "aria-label": b.tip } });
-      setIcon(btn, b.icon);
-      if (b.onClick) btn.addEventListener("click", b.onClick);
-    }
   }
 
   // --- brand bar ------------------------------------------------------------
@@ -156,31 +127,6 @@ export class ChatPanel {
 
     bar.appendChild(spacer);
     bar.appendChild(this.yoloToggle);
-  }
-
-  // --- stats bar (backlinks, edit, words, chars, eye) -----------------------
-
-  private renderStats(): void {
-    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
-    this.statsbarEl.empty();
-    this.statsbarEl.createSpan({ text: `0 ${t("ui.links")}` });
-    const spacer = this.statsbarEl.createDiv({ cls: "dsai-statsbar__spacer" });
-    void spacer;
-    const editBtn = this.statsbarEl.createEl("button", { cls: "dsai-statsbar__btn" });
-    setIcon(editBtn, "square-pen");
-    const wordCount = this.currentInputStats().words;
-    const charCount = this.currentInputStats().chars;
-    this.statsbarEl.createSpan({ text: `${wordCount} ${t("ui.words")}` });
-    this.statsbarEl.createSpan({ text: `${charCount} ${t("ui.chars")}` });
-    const eyeBtn = this.statsbarEl.createEl("button", { cls: "dsai-statsbar__btn" });
-    setIcon(eyeBtn, "eye-off");
-  }
-
-  private currentInputStats(): { words: number; chars: number } {
-    const text = this.inputBar?.value() ?? "";
-    const chars = text.length;
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    return { words, chars };
   }
 
   // --- messages + sessions -------------------------------------------------

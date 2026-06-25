@@ -33,35 +33,10 @@
   overflow: hidden;
 }
 
-/* ---- top icon toolbar ---- */
-.dsai-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--dsai-border);
-  background: var(--dsai-bg-2);
-  flex: none;
-}
-.dsai-toolbar__btn {
-  width: 28px; height: 28px;
-  display: grid; place-items: center;
-  border: none; background: transparent;
-  border-radius: var(--dsai-radius-sm);
-  cursor: pointer;
-  color: var(--dsai-text-muted);
-  transition: .12s;
-}
-.dsai-toolbar__btn:hover {
-  background: var(--dsai-bg-3);
-  color: var(--dsai-text);
-}
-
-/* ---- brand bar ---- */
+/* ---- brand bar (top) ---- */
 .dsai-brand {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--dsai-border);
+  padding: 12px 16px;
   background: var(--dsai-bg);
   flex: none;
 }
@@ -74,8 +49,8 @@
   flex: none;
 }
 .dsai-brand__name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   letter-spacing: -0.2px;
 }
 
@@ -371,24 +346,7 @@
 }
 
 /* ---- bottom stats bar ---- */
-.dsai-statsbar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 4px 14px;
-  font-size: 11px;
-  color: var(--dsai-text-muted);
-  background: var(--dsai-bg);
-  border-top: 1px solid var(--dsai-border);
-  flex: none;
-}
-.dsai-statsbar__spacer { flex: 1; }
-.dsai-statsbar__btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  border: none; background: transparent;
-  color: var(--dsai-text-muted);
-  cursor: pointer;
-  font: inherit;
-}
-.dsai-statsbar__btn:hover { color: var(--dsai-text); }
+.dsai-statsbar { display: none; }
 
 /* ---- input bar wrapper + send button ---- */
 .dsai-input-bar {

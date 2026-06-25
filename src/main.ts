@@ -126,7 +126,12 @@ export default class DeepSeekPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const data = ((await this.loadData()) as PluginData | null) ?? {};
-    this.settings = { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) };
+    const merged = { ...DEFAULT_SETTINGS, ...(data.settings ?? {}) };
+    // Clamp any persisted max_tokens that was set by an older version
+    // when the upper limit was 1,000,000 (DeepSeek now caps at 393,216).
+    if (merged.maxTokens > 393216) merged.maxTokens = 393216;
+    if (merged.maxTokens < 1) merged.maxTokens = 1;
+    this.settings = merged;
   }
 
   async saveSettings(): Promise<void> {

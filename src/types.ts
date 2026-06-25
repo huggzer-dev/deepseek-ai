@@ -33,6 +33,11 @@ export interface DeepSeekSettings {
   maxAgentLoops: number;
 }
 
+/** Hard limits from the DeepSeek API (max_tokens is [1, 393216] for v4 models). */
+export const MAX_TOKENS_LIMIT = 393216;
+export const MIN_TOKENS_LIMIT = 1;
+export const DEFAULT_MAX_TOKENS = 8192;
+
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
 export const DEEPSEEK_MODELS = [
@@ -45,7 +50,7 @@ export type DeepSeekModelId = (typeof DEEPSEEK_MODELS)[number]["id"];
 export const DEFAULT_SETTINGS: DeepSeekSettings = {
   apiKey: "",
   model: "deepseek-v4-flash",
-  maxTokens: 64000,
+  maxTokens: DEFAULT_MAX_TOKENS,
   temperature: 0.7,
   language: "zh-CN",
   autoApproveRisk: RiskLevel.READ_ONLY,

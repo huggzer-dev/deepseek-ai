@@ -1,0 +1,30 @@
+{
+  "sessions": [
+    {
+      "id": "s_mqt4u1cz_j3osnj",
+      "title": "New chat",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        },
+        {
+          "role": "user",
+          "content": "hi"
+        }
+      ],
+      "createdAt": 1782369589859,
+      "updatedAt": 1782369678541,
+      "planMode": true
+    }
+  ],
+  "settings": {
+    "apiKey": "sk-92339c87a82d4c718234dd16c1ee978d",
+    "model": "deepseek-v4-flash",
+    "maxTokens": 495616,
+    "temperature": 0.7,
+    "language": "zh-CN",
+    "autoApproveRisk": 0,
+    "maxAgentLoops": 40
+  }
+}

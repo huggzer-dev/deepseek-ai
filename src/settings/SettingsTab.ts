@@ -38,7 +38,7 @@ export class DeepSeekSettingsTab extends PluginSettingTab {
     });
 
     new Setting(containerEl).setName(t("settings.maxTokens")).setDesc(t("settings.maxTokensDesc")).addSlider((s) => {
-      s.setLimits(4096, 1_000_000, 4096).setDynamicTooltip().setValue(this.plugin.settings.maxTokens).onChange(async (v) => {
+      s.setLimits(1024, 64_000, 1024).setDynamicTooltip().setValue(this.plugin.settings.maxTokens).onChange(async (v) => {
         this.plugin.settings.maxTokens = v;
         await this.plugin.saveSettings();
       });

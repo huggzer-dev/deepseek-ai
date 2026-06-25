@@ -1,6 +1,13 @@
 import { requestUrl } from "obsidian";
-import { DEEPSEEK_BASE_URL, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
+import { DEEPSEEK_BASE_URL, MAX_TOKENS_LIMIT, MIN_TOKENS_LIMIT, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
 import { StreamParser } from "./StreamParser";
+
+/** Clamp a value into the API's valid range, logging a warning if it had to move. */
+function clampMaxTokens(v: number): number {
+  if (!Number.isFinite(v) || v < MIN_TOKENS_LIMIT) return MIN_TOKENS_LIMIT;
+  if (v > MAX_TOKENS_LIMIT) return MAX_TOKENS_LIMIT;
+  return Math.floor(v);
+}
 
 /**
  * DeepSeek LLM provider — direct HTTPS calls to the official endpoint.
@@ -19,7 +26,7 @@ export class DeepSeekProvider {
     const body: Record<string, unknown> = {
       model: opts.model,
       messages,
-      max_tokens: opts.maxTokens,
+      max_tokens: clampMaxTokens(opts.maxTokens),
       temperature: opts.temperature,
       stream: true,
     };
@@ -60,7 +67,7 @@ export class DeepSeekProvider {
         model: opts.model,
         prompt,
         suffix,
-        max_tokens: opts.maxTokens,
+        max_tokens: clampMaxTokens(opts.maxTokens),
         temperature: opts.temperature,
         stream: false,
       }),

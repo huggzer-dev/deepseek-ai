@@ -3,8 +3,8 @@
   "name": "deepseek-ai",
   "version": "0.1.0",
   "minAppVersion": "1.7.2",
-  "description": "deepseek-ai for obsidian",
+  "description": "AI agent as your vault's brain. Read, write, search, and manage notes with natural language.",
   "author": "huggzer-dev",
-  "authorUrl": "https://github.com/huggzer-dev/deepseek-ai",
+  "authorUrl": "https://github.com/huggzer-dev",
   "isDesktopOnly": false
 }

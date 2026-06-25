@@ -81,7 +81,9 @@ export class ChatPanel {
 
   private renderBrand(view: HTMLElement): void {
     const brand = view.createDiv({ cls: "dsai-brand" });
-    brand.createEl("span", { cls: "dsai-brand__icon", text: "✦" });
+    const icon = brand.createSpan({ cls: "dsai-brand__icon" });
+    // Orange diamond ◆ as the brand mark (matches Obsidian screenshot).
+    icon.setText("◆");
     brand.createEl("span", { cls: "dsai-brand__name", text: "deepseek-ai" });
   }
 
@@ -162,8 +164,10 @@ export class ChatPanel {
     if (!active || active.messages.length === 0) {
       const empty = this.messagesEl.createDiv({ cls: "dsai-empty" });
       empty.setText(translate(this.plugin.settings.language, "chat.empty"));
+      this.messagesEl.addClass("is-empty");
       return;
     }
+    this.messagesEl.removeClass("is-empty");
     for (const m of active.messages) this.appendMessage(m);
     this.scrollToBottom();
   }

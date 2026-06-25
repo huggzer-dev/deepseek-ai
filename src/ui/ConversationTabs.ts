@@ -4,7 +4,8 @@ export type TabAction = "select" | "close" | "new";
 
 /**
  * Horizontal tab bar for multi-conversation management.
- * Renders a row of pill-style tabs plus a "+" spawner.
+ * Renders a row of text-based session tabs plus a "+" spawner at the end.
+ * Matches the Obsidian-native look (titles wrap to 2 lines if long).
  */
 export class ConversationTabs {
   readonly el: HTMLElement;
@@ -15,7 +16,7 @@ export class ConversationTabs {
     private activeId: string | undefined,
     private onAction: (action: TabAction, sessionId: string) => void,
   ) {
-    this.el = parent.createDiv({ cls: "deepseek-tabs" });
+    this.el = parent.createDiv({ cls: "dsai-conv-tabs" });
     this.render();
   }
 
@@ -27,19 +28,21 @@ export class ConversationTabs {
 
   private render(): void {
     this.el.empty();
+    const list = this.el.createDiv({ cls: "dsai-conv-tabs__list" });
     for (const s of this.sessions) {
-      const tab = this.el.createDiv({
-        cls: `deepseek-tabs__tab${s.id === this.activeId ? " is-active" : ""}`,
+      const tab = list.createDiv({
+        cls: `dsai-conv-tab${s.id === this.activeId ? " is-active" : ""}`,
+        attr: { title: s.title || "Untitled" },
       });
-      tab.createSpan({ cls: "deepseek-tabs__label", text: s.title || "Untitled" });
-      const close = tab.createSpan({ cls: "deepseek-tabs__close", text: "×" });
+      tab.createSpan({ cls: "dsai-conv-tab__label", text: s.title || "Untitled" });
+      tab.addEventListener("click", () => this.onAction("select", s.id));
+      const close = tab.createSpan({ cls: "dsai-conv-tab__close", text: "×" });
       close.addEventListener("click", (e) => {
         e.stopPropagation();
         this.onAction("close", s.id);
       });
-      tab.addEventListener("click", () => this.onAction("select", s.id));
     }
-    const plus = this.el.createDiv({ cls: "deepseek-tabs__plus", text: "+" });
+    const plus = list.createDiv({ cls: "dsai-conv-tab__plus", text: "+" });
     plus.addEventListener("click", () => this.onAction("new", ""));
   }
 }

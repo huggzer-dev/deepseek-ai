@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>deepseek-ai · UI 交互原型</title>
+<style>
+  :root {
+    --dsai-accent:        #f97316;
+    --dsai-accent-2:      #fb923c;
+    --dsai-accent-soft:   #fff7ed;
+    --dsai-border:        #e5e5e5;
+    --dsai-border-strong: #d4d4d4;
+    --dsai-bg:            #fafafa;
+    --dsai-bg-2:          #f4f4f5;
+    --dsai-bg-3:          #e4e4e7;
+    --dsai-text:          #18181b;
+    --dsai-text-muted:    #71717a;
+    --dsai-bubble-user:   #e4e4e7;
+    --dsai-tab-active:    #8b5cf6;
+    --dsai-error:         #ef4444;
+    --dsai-success:       #10b981;
+    --dsai-radius:        10px;
+    --dsai-radius-sm:     6px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #1a1a1a;
+    color: var(--dsai-text);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  /* layout: side-by-side prototype gallery */
+  .gallery {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .gallery__title {
+    color: #fafafa;
+    text-align: center;
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .gallery__subtitle {
+    color: #a1a1aa;
+    text-align: center;
+    margin: 0 0 16px;
+    font-size: 13px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 360px 360px 360px;
+    gap: 20px;
+    justify-content: center;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .grid { grid-template-columns: 360px 360px; }
+  }
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: 360px; }
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel__label {
+    color: #fb923c;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .panel__desc {
+    color: #a1a1aa;
+    font-size: 12px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  /* the plugin chrome (simulates Obsidian right sidebar) */
+  .plugin-frame {
+    width: 360px;
+    height: 720px;
+    background: var(--dsai-bg);
+    border: 1px solid var(--dsai-border);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
+    font-size: 13px;
+  }
+
+  /* brand bar */
+  .dsai-brand {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px 8px;
+    background: var(--dsai-bg);
+    flex: none;
+  }
+  .dsai-brand__icon {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--dsai-accent), var(--dsai-accent-2));
+    display: grid; place-items: center;
+    color: #fff; font-size: 14px;
+    flex: none;
+  }
+  .dsai-brand__name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  /* messages */
+  .dsai-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .dsai-messages::-webkit-scrollbar { width: 6px; }
+  .dsai-messages::-webkit-scrollbar-thumb {
+    background: var(--dsai-border-strong); border-radius: 3px;
+  }
+  .dsai-empty {
+    margin: auto 0;
+    color: var(--dsai-text-muted);
+    font-size: 13px;
+    text-align: right;
+    padding: 8px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dsai-msg { display: flex; flex-direction: column; max-width: 92%; }
+  .dsai-msg--user { margin-left: auto; }
+  .dsai-msg--assistant { margin-right: auto; }
+  .dsai-msg--system { margin: 0 auto; max-width: 80%; }
+  .dsai-bubble {
+    padding: 10px 14px;
+    border-radius: var(--dsai-radius);
+    line-height: 1.5;
+    word-wrap: break-word;
+    font-size: 13px;
+  }
+  .dsai-msg--user .dsai-bubble {
+    background: var(--dsai-bubble-user);
+    color: var(--dsai-text);
+  }
+  .dsai-msg--assistant .dsai-bubble {
+    background: transparent;
+    padding: 0;
+    color: var(--dsai-text);
+  }
+  .dsai-msg--system .dsai-bubble {
+    background: transparent;
+    color: var(--dsai-text-muted);
+    font-size: 12px;
+    text-align: center;
+  }
+  .dsai-bubble p:first-child { margin-top: 0; }
+  .dsai-bubble p:last-child { margin-bottom: 0; }
+  .dsai-bubble pre {
+    background: var(--dsai-bg-3);
+    border-radius: var(--dsai-radius-sm);
+    padding: 8px 10px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin: 8px 0;
+  }
+  .dsai-bubble code {
+    background: var(--dsai-bg-3);
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .dsai-bubble--error {
+    color: var(--dsai-error);
+    background: rgba(239, 68, 68, .08);
+    border: 1px solid rgba(239, 68, 68, .25);
+    padding: 10px 14px;
+  }
+  .dsai-retry-btn {
+    margin-top: 6px;
+    background: var(--dsai-bg-2);
+    border: 1px solid var(--dsai-border-strong);
+    border-radius: var(--dsai-radius-sm);
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: block;
+  }
+  .dsai-retry-btn:hover {
+    border-color: var(--dsai-accent);
+    color: var(--dsai-accent);
+  }
+
+  /* typing indicator */
+  .dsai-typing { display: inline-flex; gap: 4px; padding: 6px 0; }
+  .dsai-typing span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--dsai-text-muted);
+    animation: dsai-bounce 1.2s infinite ease-in-out;
+  }
+  .dsai-typing span:nth-child(2) { animation-delay: .15s; }
+  .dsai-typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes dsai-bounce {
+    0%, 80%, 100% { transform: scale(.6); opacity: .5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* tool call card */
+  .dsai-tool-card {
+    border: 1px solid var(--dsai-border);
+    border-radius: var(--dsai-radius);
+    background: var(--dsai-bg-2);
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .dsai-tool-card__head {
+    display: flex; align-items: center; gap: 6px;
+    font-weight: 600; margin-bottom: 4px;
+  }
+  .dsai-tool-card__head .dsai-ico { color: var(--dsai-text-muted); }
+  .dsai-tool-card__risk {
+    margin-left: auto;
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 99px;
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+  .dsai-tool-card__risk.is-read_only   { color: var(--dsai-text-muted); background: var(--dsai-bg-3); }
+  .dsai-tool-card__risk.is-edit_safe   { color: #2563eb;           background: rgba(37,99,235,.12); }
+  .dsai-tool-card__risk.is-edit_danger { color: #f59e0b;           background: rgba(245,158,11,.15); }
+  .dsai-tool-card__risk.is-external    { color: var(--dsai-error);  background: rgba(239,68,68,.12); }
+  .dsai-tool-card__code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--dsai-bg);
+    border: 1px solid var(--dsai-border);
+    border-radius: var(--dsai-radius-sm);
+    padding: 4px 6px;
+    font-size: 11px;
+    white-space: pre-wrap;
+    max-height: 120px; overflow-y: auto;
+    margin: 2px 0 4px;
+  }
+  .dsai-tool-card__result {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--dsai-text-muted);
+    white-space: pre-wrap;
+    max-height: 100px; overflow-y: auto;
+  }
+
+  /* tab bar */
+  .dsai-tabbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px 6px 12px;
+    border-top: 1px solid var(--dsai-border);
+    background: var(--dsai-bg-2);
+    flex: none;
+  }
+  .dsai-conv-tabs {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .dsai-conv-tabs__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: flex-end;
+    width: 100%;
+  }
+  .dsai-conv-tab {
+    position: relative;
+    padding: 4px 8px;
+    max-width: 120px;
+    font-size: 12px;
+    color: var(--dsai-text-muted);
+    cursor: pointer;
+    white-space: normal;
+    word-break: break-all;
+    line-height: 1.3;
+    border-radius: var(--dsai-radius-sm) var(--dsai-radius-sm) 0 0;
+    background: transparent;
+  }
+  .dsai-conv-tab:hover { color: var(--dsai-text); }
+  .dsai-conv-tab.is-active {
+    color: var(--dsai-text);
+    font-weight: 600;
+  }
+  .dsai-conv-tab.is-active::after {
+    content: "";
+    position: absolute;
+    left: 4px; right: 4px; bottom: -4px;
+    height: 2px;
+    background: var(--dsai-tab-active);
+    border-radius: 2px;
+  }
+  .dsai-conv-tab__plus {
+    padding: 4px 8px;
+    font-size: 14px;
+    color: var(--dsai-text-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .dsai-conv-tab__plus:hover { color: var(--dsai-text); background: var(--dsai-bg-2); }
+  .dsai-tabbar__actions { display: flex; gap: 2px; }
+  .dsai-tabbar__btn {
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    border: none; background: transparent;
+    border-radius: var(--dsai-radius-sm);
+    color: var(--dsai-text-muted);
+    cursor: pointer;
+  }
+  .dsai-tabbar__btn:hover { background: var(--dsai-bg-3); color: var(--dsai-text); }
+
+  /* input section */
+  .dsai-input-section {
+    background: var(--dsai-bg-2);
+    border-top: 1px solid var(--dsai-border);
+    padding: 8px 12px 8px;
+    flex: none;
+  }
+  .dsai-attachments {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 0 0 4px;
+  }
+  .dsai-attachments:empty { display: none; }
+  .dsai-attachment {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--dsai-bg);
+    border: 1px solid var(--dsai-border-strong);
+    border-radius: 999px;
+    padding: 2px 8px 2px 4px;
+    font-size: 11px;
+    color: var(--dsai-text-muted);
+  }
+  .dsai-attachment__icon { font-size: 12px; }
+  .dsai-attachment__name { max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+  .dsai-attachment__remove {
+    cursor: pointer; color: var(--dsai-text-muted);
+    margin-left: 2px;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .dsai-attachment__remove:hover { color: var(--dsai-error); }
+  .dsai-selection-counter {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--dsai-accent);
+    margin-bottom: 4px;
+  }
+  .dsai-selection-counter:empty { display: none; }
+  .dsai-textarea {
+    width: 100%;
+    min-height: 60px;
+    max-height: 220px;
+    resize: none;
+    border: 1px solid transparent;
+    border-radius: var(--dsai-radius);
+    background: var(--dsai-bg);
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--dsai-text);
+    outline: none;
+  }
+  .dsai-textarea:focus { border-color: var(--dsai-accent); }
+  .dsai-textarea::placeholder { color: var(--dsai-text-muted); }
+
+  /* status row */
+  .dsai-statusbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 4px 2px;
+    font-size: 12px;
+    color: var(--dsai-text);
+  }
+  .dsai-statusbar__chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--dsai-radius-sm);
+    cursor: pointer;
+    color: var(--dsai-text);
+    background: transparent;
+    border: none;
+    font: inherit;
+  }
+  .dsai-statusbar__chip:hover { background: var(--dsai-bg-3); }
+  .dsai-statusbar__chip.is-accent { color: var(--dsai-accent); }
+  .dsai-statusbar__spacer { flex: 1; }
+  .dsai-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .dsai-toggle__switch {
+    position: relative;
+    width: 28px; height: 16px;
+    background: var(--dsai-bg-3);
+    border-radius: 999px;
+    transition: .15s;
+  }
+  .dsai-toggle__switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    transition: .15s;
+  }
+  .dsai-toggle.is-on .dsai-toggle__switch {
+    background: var(--dsai-accent);
+  }
+  .dsai-toggle.is-on .dsai-toggle__switch::after {
+    left: 14px;
+  }
+
+  /* helper badge under the panel */
+  .panel__hint {
+    color: #71717a;
+    font-size: 11px;
+    text-align: center;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="gallery">
+  <h1 class="gallery__title">deepseek-ai · Claudian-style 交互原型</h1>
+  <p class="gallery__subtitle">
+    三种状态对比 — 全部可点击交互（标签切换、YOLO 切换、Effort 循环、发送消息）
+  </p>
+
+  <div class="grid">
+
+    <!-- ====================================================== -->
+    <!-- Panel 1: empty / fresh state                         -->
+    <!-- ====================================================== -->
+    <div class="panel">
+      <div class="panel__label">状态 1 · 空状态</div>
+      <div class="panel__desc">首次打开插件</div>
+      <div class="plugin-frame">
+        <div class="dsai-brand">
+          <span class="dsai-brand__icon">◆</g/span>
+          <span class="dsai-brand__name">deepseek-ai</span>
+        </div>
+        <div class="dsai-messages" id="m-empty">
+          <div class="dsai-empty">开始与 DeepSeek 对话吧 ✨</div>
+        </div>
+        <div class="dsai-tabbar">
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-tabbar__actions">
+            <button class="dsai-tabbar__btn" title="edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="dsai-tabbar__btn" title="history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 12 1 12 1 20 9 20"/><path d="M3.51 9a9 9 0 1 0 2.13-3.36L1 10"/><polyline points="12 7 12 12 15 15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="dsai-input-section">
+          <div class="dsai-attachments"></div>
+          <div class="dsai-selection-counter"></div>
+          <textarea class="dsai-textarea" id="t-empty" placeholder="How can I help you today?"></textarea>
+          <div class="dsai-statusbar">
+            <button class="dsai-statusbar__chip is-accent" data-action="model">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Sonnet
+            </button>
+            <button class="dsai-statusbar__chip" data-action="effort">Effort: High</button>
+            <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <div class="dsai-statusbar__spacer"></div>
+            <button class="dsai-toggle is-on" data-action="yolo">
+              <span>YOLO</span>
+              <span class="dsai-toggle__switch"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="panel__hint">点击标签 / Effort / YOLO 测试交互</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- Panel 2: active conversation with tool calls         -->
+    <!-- ====================================================== -->
+    <div class="panel">
+      <div class="panel__label">状态 2 · 多轮 + 工具调用</div>
+      <div class="panel__desc">正常使用中</div>
+      <div class="plugin-frame">
+        <div class="dsai-brand">
+          <span class="dsai-brand__icon">◆</g/span>
+          <span class="dsai-brand__name">deepseek-ai</span>
+        </div>
+        <div class="dsai-messages" id="m-active">
+          <div class="dsai-msg dsai-msg--user">
+            <div class="dsai-bubble">请帮我搜索相关文档并完善本文档。</div>
+          </div>
+          <div class="dsai-msg dsai-msg--user">
+            <div class="dsai-bubble">请帮我搜索相关文档并完善本文档。</div>
+          </div>
+          <div class="dsai-msg dsai-msg--assistant">
+            <div class="dsai-bubble">
+              <p>好的，我先读取当前文档，然后用 <code>search_vault</code> 查找相关引用。</p>
+              <div class="dsai-tool-card">
+                <div class="dsai-tool-card__head">
+                  <span class="dsai-ico">🔧</span>
+                  <span>search_vault</span>
+                  <span class="dsai-tool-card__risk is-read_only">READ_ONLY</span>
+                </div>
+                <div class="dsai-tool-card__code">{
+  "query": "API 设计模式",
+  "limit": 5
+}</div>
+                <div class="dsai-tool-card__result">result: [{path: "notes/api.md", snippet: "..."}, ...]</div>
+              </div>
+              <p>找到了 3 个相关文档，正在补全缺失章节…</p>
+            </div>
+          </div>
+        </div>
+        <div class="dsai-tabbar">
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-tabbar__actions">
+            <button class="dsai-tabbar__btn" title="edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="dsai-tabbar__btn" title="history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 12 1 12 1 20 9 20"/><path d="M3.51 9a9 9 0 1 0 2.13-3.36L1 10"/><polyline points="12 7 12 12 15 15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="dsai-input-section">
+          <div class="dsai-attachments">
+            <div class="dsai-attachment">
+              <span class="dsai-attachment__icon">📄</span>
+              <span class="dsai-attachment__name">论企业落地大模型之数据...</span>
+              <span class="dsai-attachment__remove">×</span>
+            </div>
+          </div>
+          <div class="dsai-selection-counter">
+            <span style="color:var(--dsai-accent);">1 line selected</span>
+          </div>
+          <textarea class="dsai-textarea" placeholder="How can I help you today?"></textarea>
+          <div class="dsai-statusbar">
+            <button class="dsai-statusbar__chip is-accent" data-action="model">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Sonnet
+            </button>
+            <button class="dsai-statusbar__chip" data-action="effort">Effort: High</button>
+            <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <div class="dsai-statusbar__spacer"></div>
+            <button class="dsai-toggle is-on" data-action="yolo">
+              <span>YOLO</span>
+              <span class="dsai-toggle__switch"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="panel__hint">点击标签 1/2/3 切换活动会话</div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- Panel 3: error / loading state                        -->
+    <!-- ====================================================== -->
+    <div class="panel">
+      <div class="panel__label">状态 3 · 错误 + 等待</div>
+      <div class="panel__desc">API 错误 / 工具审批</div>
+      <div class="plugin-frame">
+        <div class="dsai-brand">
+          <span class="dsai-brand__icon">◆</g/span>
+          <span class="dsai-brand__name">deepseek-ai</span>
+        </div>
+        <div class="dsai-messages" id="m-error">
+          <div class="dsai-msg dsai-msg--user">
+            <div class="dsai-bubble">在 notes/api.md 写入 hello world</div>
+          </div>
+          <div class="dsai-msg dsai-msg--assistant">
+            <div class="dsai-bubble dsai-bubble--error">
+              ⚠ DeepSeek API 400: {"error":{"message":"Invalid max_tokens value, the valid range of max_tokens is [1, 393216]"},"type":"invalid_request_error","param":null,"code":"invalid_request_error"}}
+              <button class="dsai-retry-btn">重试</button>
+            </div>
+          </div>
+          <div class="dsai-msg dsai-msg--system">
+            <div class="dsai-bubble">approval required for write_file</div>
+          </div>
+        </div>
+        <div class="dsai-tabbar">
+          <div class="dsai-conv-tabs"><div class="dsai-conv-tabs__list"><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab">New chatx</div><div class="dsai-conv-tab is-active">New chatx</div><div class="dsai-conv-tab__plus" title="new chat">+</div></div></div>
+          <div class="dsai-tabbar__actions">
+            <button class="dsai-tabbar__btn" title="edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="dsai-tabbar__btn" title="history">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 12 1 12 1 20 9 20"/><path d="M3.51 9a9 9 0 1 0 2.13-3.36L1 10"/><polyline points="12 7 12 12 15 15"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="dsai-input-section">
+          <div class="dsai-attachments"></div>
+          <div class="dsai-selection-counter"></div>
+          <textarea class="dsai-textarea" id="t-error" placeholder="How can I help you today?"></textarea>
+          <div class="dsai-statusbar">
+            <button class="dsai-statusbar__chip is-accent" data-action="model">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Sonnet
+            </button>
+            <button class="dsai-statusbar__chip" data-action="effort">Effort: Med</button>
+            <button class="dsai-statusbar__chip" data-action="folder" title="attach file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <div class="dsai-statusbar__spacer"></div>
+            <button class="dsai-toggle" data-action="yolo">
+              <span>YOLO</span>
+              <span class="dsai-toggle__switch"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="panel__hint">在 textarea 中输入文字模拟填写</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ====== Interactive demo ======
+
+  // 1) tab switching — click a tab to make it active
+  document.querySelectorAll(".plugin-frame").forEach((frame) => {
+    const tabs = frame.querySelectorAll(".dsai-conv-tab");
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => t.classList.remove("is-active"));
+        tab.classList.add("is-active");
+      });
+    });
+  });
+
+  // 2) YOLO toggle
+  document.querySelectorAll('[data-action="yolo"]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btn.classList.toggle("is-on");
+    });
+  });
+
+  // 3) Effort cycle: High → Med → Low → High
+  const EFFORTS = ["High", "Med", "Low"];
+  document.querySelectorAll('[data-action="effort"]').forEach((btn) => {
+    let i = 0;
+    btn.addEventListener("click", () => {
+      i = (i + 1) % EFFORTS.length;
+      btn.textContent = `Effort: ${EFFORTS[i]}`;
+    });
+  });
+
+  // 4) Model cycle: Sonnet → Opus → Haiku → Sonnet
+  const MODELS = ["Sonnet", "Opus", "Haiku"];
+  document.querySelectorAll('[data-action="model"]').forEach((btn) => {
+    let i = 0;
+    btn.addEventListener("click", () => {
+      i = (i + 1) % MODELS.length;
+      const label = btn.querySelector("span") ? btn : null;
+      // The model chip has an icon + text "Sonnet" — preserve the icon
+      const text = btn.childNodes[btn.childNodes.length - 1];
+      text.textContent = " " + MODELS[i];
+    });
+  });
+
+  // 5) Auto-grow textareas
+  document.querySelectorAll(".dsai-textarea").forEach((ta) => {
+    const autosize = () => {
+      ta.style.height = "auto";
+      ta.style.height = Math.min(ta.scrollHeight, 220) + "px";
+    };
+    ta.addEventListener("input", autosize);
+    autosize();
+  });
+
+  // 6) Click "重试" button to simulate a re-send
+  document.querySelectorAll(".dsai-retry-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const card = btn.closest(".dsai-msg");
+      if (card) card.classList.add("is-retrying");
+      btn.textContent = "重试中…";
+      setTimeout(() => {
+        btn.textContent = "重试";
+        card?.classList.remove("is-retrying");
+      }, 1200);
+    });
+  });
+
+  // 7) Type in textarea → push a "1 line selected" indicator below attachments
+  document.querySelectorAll(".dsai-textarea").forEach((ta) => {
+    const frame = ta.closest(".plugin-frame");
+    const counter = frame.querySelector(".dsai-selection-counter");
+    ta.addEventListener("input", () => {
+      if (ta.value.length > 5) {
+        counter.innerHTML = `<span>${ta.value.length} chars typed</span>`;
+      } else {
+        counter.innerHTML = "";
+      }
+    });
+  });
+</script>
+</body>
+</html>

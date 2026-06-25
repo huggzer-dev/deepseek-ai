@@ -219,6 +219,13 @@
   flex: none;
   min-height: 30px;
 }
+.dsai-tabbar__tabs {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
 .dsai-conv-tabs {
   display: flex;
   align-items: center;
@@ -271,7 +278,13 @@
 }
 .dsai-conv-tab__plus:hover { color: var(--dsai-text); background: var(--dsai-bg-2); }
 
-.dsai-tabbar__actions { display: flex; gap: 2px; align-items: center; flex: none; }
+.dsai-tabbar__actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  flex: none;
+  margin-left: auto;  /* push edit/history icons to the FAR RIGHT */
+}
 .dsai-tabbar__btn {
   width: 26px; height: 26px;
   display: grid; place-items: center;

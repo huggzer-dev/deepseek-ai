@@ -329,7 +329,11 @@
     user-select: none;
   }
   .dsai-conv-tab__plus:hover { color: var(--dsai-text); background: var(--dsai-bg-2); }
-  .dsai-tabbar__actions { display: flex; gap: 2px; }
+  .dsai-tabbar__actions {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;  /* push edit/history icons to the FAR RIGHT */
+  }
   .dsai-tabbar__btn {
     width: 28px; height: 28px;
     display: grid; place-items: center;

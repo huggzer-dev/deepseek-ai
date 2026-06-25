@@ -50,8 +50,7 @@ export class ChatPanel {
     this.headerEl = view.createDiv({ cls: "deepseek-chat-view__header" });
     this.headerEl.createEl("span", { cls: "deepseek-chat-view__title", text: "DeepSeek" });
 
-    this.planBadge = this.headerEl.createEl("span", { cls: "deepseek-chat-view__plan-badge", text: "PLAN" });
-    this.planBadge.style.display = "none";
+    this.planBadge = this.headerEl.createEl("span", { cls: "deepseek-chat-view__plan-badge is-hidden", text: "PLAN" });
 
     this.planBtn = this.headerEl.createEl("button", {
       cls: "deepseek-chat-view__btn",
@@ -105,10 +104,10 @@ export class ChatPanel {
     // Sync plan badge
     if (active.planMode) {
       this.planBtn!.textContent = translate(this.plugin.settings.language, "plan.disable");
-      this.planBadge!.style.display = "";
+      this.planBadge!.classList.remove("is-hidden");
     } else {
       this.planBtn!.textContent = translate(this.plugin.settings.language, "plan.enable");
-      this.planBadge!.style.display = "none";
+      this.planBadge!.classList.add("is-hidden");
     }
 
     for (const m of active.messages) this.appendMessage(m);

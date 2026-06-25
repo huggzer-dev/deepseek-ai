@@ -44,9 +44,8 @@ export class InlineEditModal extends Modal {
     const promptWrap = this.contentEl.createDiv();
     this.promptInput = promptWrap.createEl("textarea", {
       attr: { rows: "3", placeholder: t("inline.promptPlaceholder") },
+      cls: "deepseek-inline-prompt",
     });
-    this.promptInput.style.width = "100%";
-    this.promptInput.style.resize = "vertical";
 
     const btnRow = this.contentEl.createDiv({ cls: "deepseek-inline__actions" });
     new Setting(btnRow)

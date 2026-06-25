@@ -273,6 +273,16 @@
   background: var(--color-orange); color: #000; font-size: 9px;
   font-weight: 700; letter-spacing: .5px; padding: 1px 6px; border-radius: 99px;
 }
+.deepseek-chat-view__plan-badge.is-hidden { display: none; }
+
+/* Inline edit prompt */
+.deepseek-inline-prompt {
+  width: 100%;
+  resize: vertical;
+}
+
+/* Mention popup wrapper */
+.deepseek-mention-wrap { position: relative; }
 
 /* Image attachments — Phase 4 */
 .deepseek-input-attachments { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 0 6px; }

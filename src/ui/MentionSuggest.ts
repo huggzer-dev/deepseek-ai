@@ -23,7 +23,7 @@ export class MentionSuggest {
 
     const wrap = this.textarea.parentElement;
     if (!wrap) return;
-    wrap.style.position = wrap.style.position || "relative";
+    wrap.classList.add("deepseek-mention-wrap");
 
     const popup = wrap.createDiv({ cls: "deepseek-mention" });
     this.popup = popup;
@@ -37,6 +37,7 @@ export class MentionSuggest {
       item.createEl("span", { cls: "deepseek-mention__path", text: f.path });
       item.addEventListener("click", () => this.pick(i));
     });
+    popup.classList.add("deepseek-mention-popup");
     popup.style.bottom = `${this.textarea.offsetHeight + 8}px`;
     void query;
   }

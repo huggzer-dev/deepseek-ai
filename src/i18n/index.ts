@@ -45,6 +45,14 @@ export type TranslationKey =
   | "approval.allow"
   | "approval.deny"
   | "tabs.untitled"
+  | "ui.brand"
+  | "ui.sonnet"
+  | "ui.effort"
+  | "ui.yolo"
+  | "ui.links"
+  | "ui.words"
+  | "ui.chars"
+  | "ui.undo"
   | "tabs.newChat"
   | "plan.enable"
   | "plan.disable"
@@ -108,6 +116,14 @@ const dicts: Record<Language, Dict> = {
     "approval.deny": "拒绝",
     "tabs.untitled": "未命名会话",
     "tabs.newChat": "新建对话",
+    "ui.brand": "deepseek-ai",
+    "ui.sonnet": "Sonnet",
+    "ui.effort": "Effort",
+    "ui.yolo": "YOLO",
+    "ui.links": "反向链接",
+    "ui.words": "个词",
+    "ui.chars": "个字符",
+    "ui.undo": "撤回",
     "plan.enable": "启用计划模式",
     "plan.disable": "关闭计划模式",
     "plan.approve": "执行计划",
@@ -168,6 +184,14 @@ const dicts: Record<Language, Dict> = {
     "approval.deny": "Deny",
     "tabs.untitled": "Untitled chat",
     "tabs.newChat": "New conversation",
+    "ui.brand": "deepseek-ai",
+    "ui.sonnet": "Sonnet",
+    "ui.effort": "Effort",
+    "ui.yolo": "YOLO",
+    "ui.links": "backlinks",
+    "ui.words": "words",
+    "ui.chars": "chars",
+    "ui.undo": "undo",
     "plan.enable": "Enable plan mode",
     "plan.disable": "Disable plan mode",
     "plan.approve": "Execute plan",

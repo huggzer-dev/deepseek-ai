@@ -28,15 +28,19 @@ export class InputBar {
     parent: HTMLElement,
     private plugin: DeepSeekPlugin,
     private onSend: (parsed: ParsedInput) => void,
+    private onInputChange?: (text: string) => void,
   ) {
-    parent.createDiv({ cls: "deepseek-input-bar" }, (bar) => {
-      // Image attachment strip
-      this.attachmentBar = bar.createDiv({ cls: "deepseek-input-attachments" });
+    parent.createDiv({ cls: "dsai-input-bar" }, (bar) => {
+      this.attachmentBar = bar.createDiv({ cls: "dsai-attachments" });
 
       this.textarea = bar.createEl("textarea", {
-        attr: { rows: "1", placeholder: translate(this.plugin.settings.language, "chat.placeholder") },
+        attr: { rows: "2", placeholder: translate(this.plugin.settings.language, "chat.placeholder") },
+        cls: "dsai-textarea",
       });
-      this.textarea.addEventListener("input", () => this.onInput());
+      this.textarea.addEventListener("input", () => {
+        this.onInput();
+        this.onInputChange?.(this.textarea.value);
+      });
       this.textarea.addEventListener("keydown", (e) => this.onKey(e));
       // Drag-drop for images
       this.textarea.addEventListener("dragover", (e) => { e.preventDefault(); });
@@ -44,7 +48,7 @@ export class InputBar {
 
       this.sendBtn = bar.createEl("button", {
         text: translate(this.plugin.settings.language, "chat.send"),
-        cls: "deepseek-input-bar__send",
+        cls: "dsai-send-btn",
       });
       this.sendBtn.addEventListener("click", () => this.trigger());
     });

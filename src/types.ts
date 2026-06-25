@@ -12,6 +12,8 @@
 
 export type Language = "zh-CN" | "en";
 
+export type Effort = "low" | "medium" | "high";
+
 export const RiskLevel = {
   READ_ONLY: 0,
   EDIT_SAFE: 1,
@@ -31,6 +33,10 @@ export interface DeepSeekSettings {
   autoApproveRisk: RiskLevel;
   /** Max ReAct loop iterations before stopping. */
   maxAgentLoops: number;
+  /** Reasoning effort passed to the deepseek-reasoner family. */
+  effort: Effort;
+  /** When true, sends every tool call with thinking enabled. */
+  yolo: boolean;
 }
 
 /** Hard limits from the DeepSeek API (max_tokens is [1, 393216] for v4 models). */
@@ -55,6 +61,8 @@ export const DEFAULT_SETTINGS: DeepSeekSettings = {
   language: "zh-CN",
   autoApproveRisk: RiskLevel.READ_ONLY,
   maxAgentLoops: 12,
+  effort: "high",
+  yolo: false,
 };
 
 // ---------------------------------------------------------------------------

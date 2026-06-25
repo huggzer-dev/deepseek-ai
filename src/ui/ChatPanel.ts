@@ -7,23 +7,44 @@ import { ConversationTabs } from "./ConversationTabs";
 import { translate } from "../i18n";
 import { logger } from "../utils/logger";
 import type { Message, ToolContext, ContextInput } from "../types";
+import { setIcon } from "obsidian";
 
 /**
- * Owns the chat sidebar: renders message list + input bar + tab bar and
- * orchestrates streaming requests to DeepSeek via AgentLoop.
- * Supports multi-session tabs, Plan Mode, and image attachment.
+ * Owns the chat sidebar with a Claudian-style layout:
+ *
+ *   ┌─────────────────────────────────────────┐
+ *   │ top toolbar (icon row)                    │
+ *   ├─────────────────────────────────────────┤
+ *   │ brand bar (✦ deepseek-ai)                │
+ *   ├─────────────────────────────────────────┤
+ *   │                                          │
+ *   │ messages (user right, assistant left)    │
+ *   │                                          │
+ *   ├─────────────────────────────────────────┤
+ *   │ [1] [2] [3*]                  [✏] [↻]   │ ← tab bar
+ *   ├─────────────────────────────────────────┤
+ *   │ ┌─ chips · selected ──────────────┐    │
+ *   │ │ textarea                         │    │
+ *   │ └──────────────────────────────────┘    │
+ *   │ Sonnet  Effort: High  📁      [YOLO]     │ ← status row
+ *   ├─────────────────────────────────────────┤
+ *   │ 0 links   ✏  1 word  35 chars  👁        │ ← stats
+ *   └─────────────────────────────────────────┘
  */
 export class ChatPanel {
   private messagesEl!: HTMLElement;
-  private headerEl!: HTMLElement;
+  private tabBarEl!: HTMLElement;
+  private inputSectionEl!: HTMLElement;
   private tabsEl!: HTMLElement;
   private tabs: ConversationTabs | undefined;
   private inputBar: InputBar | undefined;
-  private planBtn: HTMLButtonElement | undefined;
-  private planBadge: HTMLElement | undefined;
+  private effortBtn: HTMLButtonElement | undefined;
+  private yoloToggle: HTMLButtonElement | undefined;
+  private statsbarEl!: HTMLElement;
   private bubbles: MessageBubble[] = [];
   private abortController: AbortController | undefined;
   private lastUserPayload: ParsedInput | undefined;
+  private unsubLang: (() => void) | undefined;
 
   constructor(private app: App, private root: HTMLElement, private plugin: DeepSeekPlugin) {}
 
@@ -31,46 +52,144 @@ export class ChatPanel {
     this.root.empty();
     const view = this.root.createDiv({ cls: "deepseek-chat-view" });
 
-    this.renderHeaderBar(view);
-    this.tabsEl = view.createDiv({ cls: "deepseek-tabs-bar" });
-    this.messagesEl = view.createDiv({ cls: "deepseek-chat-view__messages" });
-    this.inputBar = new InputBar(this.app, view.createDiv({ cls: "deepseek-chat-view__input" }), this.plugin, (p) => {
+    this.renderToolbar(view);
+    this.renderBrand(view);
+    this.messagesEl = view.createDiv({ cls: "dsai-messages" });
+
+    this.tabBarEl = view.createDiv({ cls: "dsai-tabbar" });
+    this.tabsEl = this.tabBarEl.createDiv({ cls: "dsai-tabbar__tabs" });
+    this.renderTabBarActions();
+
+    this.inputSectionEl = view.createDiv({ cls: "dsai-input-section" });
+    this.inputSectionEl.createDiv({ cls: "dsai-attachments" });
+    this.inputSectionEl.createDiv({ cls: "dsai-selection-counter" });
+
+    this.inputBar = new InputBar(this.app, this.inputSectionEl, this.plugin, (p) => {
       void this.onSend(p);
-    });
+    }, () => this.renderStats());
+
+    this.renderStatusRow(this.inputSectionEl);
+    this.statsbarEl = view.createDiv({ cls: "dsai-statsbar" });
+    this.renderStats();
 
     this.refreshSession();
 
-    // Language-change callback set by the plugin
-    this.plugin._onLangChange = () => {
-      try { this.render(); } catch { /* panel not in DOM */ }
+    this.unsubLang = () => {
+      this.plugin._onLangChange = () => {
+        try {
+          this.render();
+        } catch {
+          /* panel not in DOM */
+        }
+      };
     };
   }
 
-  private renderHeaderBar(view: HTMLElement): void {
-    this.headerEl = view.createDiv({ cls: "deepseek-chat-view__header" });
-    this.headerEl.createEl("span", { cls: "deepseek-chat-view__title", text: "DeepSeek" });
+  // --- top icon toolbar -----------------------------------------------------
 
-    this.planBadge = this.headerEl.createEl("span", { cls: "deepseek-chat-view__plan-badge is-hidden", text: "PLAN" });
-
-    this.planBtn = this.headerEl.createEl("button", {
-      cls: "deepseek-chat-view__btn",
-      text: translate(this.plugin.settings.language, "plan.enable"),
-    });
-    this.planBtn.addEventListener("click", () => this.togglePlan());
-
-    const resetBtn = this.headerEl.createEl("button", {
-      cls: "deepseek-chat-view__btn",
-      text: translate(this.plugin.settings.language, "chat.reset"),
-    });
-    resetBtn.addEventListener("click", () => this.onReset());
+  private renderToolbar(view: HTMLElement): void {
+    const bar = view.createDiv({ cls: "dsai-toolbar" });
+    const iconBtns: Array<{ icon: string; tip: string; onClick?: () => void }> = [
+      { icon: "link", tip: "Link note" },
+      { icon: "unlink", tip: "Unlink" },
+      { icon: "tag", tip: "Tags" },
+      { icon: "archive", tip: "Archive" },
+      { icon: "list", tip: "List mode" },
+      { icon: "briefcase", tip: "Workspace" },
+      { icon: "message-square", tip: "New chat" },
+      { icon: "sidebar", tip: "Toggle sidebar" },
+    ];
+    for (const b of iconBtns) {
+      const btn = bar.createEl("button", { cls: "dsai-toolbar__btn", attr: { "aria-label": b.tip } });
+      setIcon(btn, b.icon);
+      if (b.onClick) btn.addEventListener("click", b.onClick);
+    }
   }
+
+  // --- brand bar ------------------------------------------------------------
+
+  private renderBrand(view: HTMLElement): void {
+    const brand = view.createDiv({ cls: "dsai-brand" });
+    brand.createEl("span", { cls: "dsai-brand__icon", text: "✦" });
+    brand.createEl("span", { cls: "dsai-brand__name", text: "deepseek-ai" });
+  }
+
+  // --- tab bar --------------------------------------------------------------
+
+  private renderTabBarActions(): void {
+    const actions = this.tabBarEl.createDiv({ cls: "dsai-tabbar__actions" });
+    const editBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "edit" } });
+    setIcon(editBtn, "square-pen");
+    editBtn.addEventListener("click", () => this.onReset());
+    const histBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "history" } });
+    setIcon(histBtn, "history");
+    histBtn.addEventListener("click", () => this.onReset());
+  }
+
+  // --- status row (model + effort + folder + YOLO) -------------------------
+
+  private renderStatusRow(parent: HTMLElement): void {
+    const bar = parent.createDiv({ cls: "dsai-statusbar" });
+    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
+
+    const sonnet = bar.createEl("button", { cls: "dsai-statusbar__chip is-accent", text: t("ui.sonnet") });
+    setIcon(sonnet, "zap");
+    sonnet.addEventListener("click", () => this.cycleModel());
+
+    this.effortBtn = bar.createEl("button", { cls: "dsai-statusbar__chip", text: `${t("ui.effort")}: ${this.effortLabel()}` });
+    this.effortBtn.addEventListener("click", () => this.cycleEffort());
+
+    const folder = bar.createEl("button", { cls: "dsai-statusbar__chip", attr: { "aria-label": "attach" } });
+    setIcon(folder, "folder");
+    folder.addEventListener("click", () => this.inputBar?.focus());
+
+    const spacer = bar.createDiv({ cls: "dsai-statusbar__spacer" });
+
+    this.yoloToggle = bar.createEl("button", {
+      cls: `dsai-toggle${this.plugin.settings.yolo ? " is-on" : ""}`,
+      attr: { "aria-label": "yolo" },
+    });
+    const yoloLabel = this.yoloToggle.createSpan({ text: t("ui.yolo") });
+    void yoloLabel;
+    this.yoloToggle.createDiv({ cls: "dsai-toggle__switch" });
+    this.yoloToggle.addEventListener("click", () => this.toggleYolo());
+
+    bar.appendChild(spacer);
+    bar.appendChild(this.yoloToggle);
+  }
+
+  // --- stats bar (backlinks, edit, words, chars, eye) -----------------------
+
+  private renderStats(): void {
+    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
+    this.statsbarEl.empty();
+    this.statsbarEl.createSpan({ text: `0 ${t("ui.links")}` });
+    const spacer = this.statsbarEl.createDiv({ cls: "dsai-statsbar__spacer" });
+    void spacer;
+    const editBtn = this.statsbarEl.createEl("button", { cls: "dsai-statsbar__btn" });
+    setIcon(editBtn, "square-pen");
+    const wordCount = this.currentInputStats().words;
+    const charCount = this.currentInputStats().chars;
+    this.statsbarEl.createSpan({ text: `${wordCount} ${t("ui.words")}` });
+    this.statsbarEl.createSpan({ text: `${charCount} ${t("ui.chars")}` });
+    const eyeBtn = this.statsbarEl.createEl("button", { cls: "dsai-statsbar__btn" });
+    setIcon(eyeBtn, "eye-off");
+  }
+
+  private currentInputStats(): { words: number; chars: number } {
+    const text = this.inputBar?.value() ?? "";
+    const chars = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    return { words, chars };
+  }
+
+  // --- messages + sessions -------------------------------------------------
 
   private refreshSession(): void {
     this.bubbles.forEach((b) => b.destroy());
     this.bubbles = [];
     this.messagesEl.empty();
 
-    // Refresh tabs
     const all = this.plugin.sessions.list();
     const active = this.plugin.sessions.activeSession();
     if (!this.tabs) {
@@ -80,9 +199,9 @@ export class ChatPanel {
           if (s) this.switchTo(s);
         } else if (action === "close") {
           this.abortController?.abort();
-          const s = this.plugin.sessions.get(id);
-          if (s) { this.plugin.sessions.delete(id); void this.plugin.store.delete(id); }
-          if (this.plugin.sessions.activeSession() === undefined) this.plugin.sessions.create();
+          this.plugin.sessions.delete(id);
+          void this.plugin.store.delete(id);
+          if (!this.plugin.sessions.activeSession()) this.plugin.sessions.create();
           this.refreshSession();
         } else if (action === "new") {
           this.abortController?.abort();
@@ -95,40 +214,65 @@ export class ChatPanel {
     }
 
     if (!active || active.messages.length === 0) {
-      this.messagesEl.createDiv({ cls: "deepseek-message--assistant deepseek-message" }).setText(
-        translate(this.plugin.settings.language, "chat.empty"),
-      );
+      const empty = this.messagesEl.createDiv({ cls: "dsai-empty" });
+      empty.setText(translate(this.plugin.settings.language, "chat.empty"));
       return;
     }
-
-    // Sync plan badge
-    if (active.planMode) {
-      this.planBtn!.textContent = translate(this.plugin.settings.language, "plan.disable");
-      this.planBadge!.classList.remove("is-hidden");
-    } else {
-      this.planBtn!.textContent = translate(this.plugin.settings.language, "plan.enable");
-      this.planBadge!.classList.add("is-hidden");
-    }
-
     for (const m of active.messages) this.appendMessage(m);
     this.scrollToBottom();
   }
 
   private switchTo(session: import("../types").AgentSession): void {
-    // Save current session first
     void this.persistSession();
     this.plugin.sessions.restore(session);
     this.refreshSession();
   }
 
-  private togglePlan(): void {
-    const session = this.plugin.sessions.activeSession();
-    if (!session) return;
-    session.planMode = !session.planMode;
+  private onReset(): void {
+    this.abortController?.abort();
+    const old = this.plugin.sessions.activeSession();
+    const oldId = old?.id;
+    if (oldId) this.plugin.sessions.delete(oldId);
+    this.plugin.sessions.create();
     this.refreshSession();
+    if (oldId) void this.plugin.store.delete(oldId).catch(() => {});
   }
 
-  // --- send / stream -----------------------------------------------------
+  // --- settings actions (model / effort / yolo) ---------------------------
+
+  private async cycleModel(): Promise<void> {
+    const models = ["deepseek-v4-flash", "deepseek-v4-pro"] as const;
+    const i = models.indexOf(this.plugin.settings.model as (typeof models)[number]);
+    this.plugin.settings.model = models[(i + 1) % models.length]!;
+    await this.plugin.saveSettings();
+    this.render();
+  }
+
+  private async cycleEffort(): Promise<void> {
+    const order = ["low", "medium", "high"] as const;
+    const i = order.indexOf(this.plugin.settings.effort);
+    this.plugin.settings.effort = order[(i + 1) % order.length]!;
+    await this.plugin.saveSettings();
+    if (this.effortBtn) this.effortBtn.textContent = `${translate(this.plugin.settings.language, "ui.effort")}: ${this.effortLabel()}`;
+  }
+
+  private async toggleYolo(): Promise<void> {
+    this.plugin.settings.yolo = !this.plugin.settings.yolo;
+    if (this.plugin.settings.yolo) {
+      this.plugin.settings.autoApproveRisk = 99 as import("../types").RiskLevel;
+    } else {
+      this.plugin.settings.autoApproveRisk = 0; // RiskLevel.READ_ONLY
+    }
+    await this.plugin.saveSettings();
+    this.render();
+  }
+
+  private effortLabel(): string {
+    const map: Record<string, string> = { low: "Low", medium: "Med", high: "High" };
+    return map[this.plugin.settings.effort] ?? "High";
+  }
+
+  // --- send / stream -------------------------------------------------------
 
   private async onSend(parsed: ParsedInput): Promise<void> {
     this.lastUserPayload = parsed;
@@ -164,8 +308,7 @@ export class ChatPanel {
       return;
     }
 
-    const userMessage: Message = { role: "user", content: userContent };
-    this.appendMessage(userMessage);
+    this.appendMessage({ role: "user", content: userContent });
 
     const contextInput: ContextInput = {
       userInput: userContent,
@@ -174,13 +317,6 @@ export class ChatPanel {
       instruction: parsed.instruction,
       skill: parsed.skillBody ? "(pre-injected)" : undefined,
     };
-
-    // Apply plan-mode system prompt override
-    if (session.planMode) {
-      contextInput.instruction = (
-        instrBlock ? instrBlock + "\n" : ""
-      ) + "\n## Plan Mode\nBefore answering, output a clear numbered plan with `## Plan` heading, then wait for approval before executing.";
-    }
 
     const ctx: ToolContext = {
       app: this.app,
@@ -199,7 +335,6 @@ export class ChatPanel {
     ctx.emitText = (delta) => assistantBubble.appendDelta(delta);
 
     const toolBubbles = new Map<string, ToolCallBubble>();
-    let lastToolCallId: string | undefined;
 
     try {
       const gen = this.plugin.agent.run(session, contextInput, ctx);
@@ -218,7 +353,6 @@ export class ChatPanel {
             assistantBubble.finish();
             const bubble = new ToolCallBubble(this.messagesEl!, ev.name, ev.args, ev.riskLevel);
             toolBubbles.set(ev.id, bubble);
-            lastToolCallId = ev.id;
             break;
           }
           case "tool_result": {
@@ -228,6 +362,9 @@ export class ChatPanel {
             }
             break;
           }
+          case "plan":
+            void ev;
+            break;
           case "complete":
             assistantBubble.finish(ac.signal.aborted);
             break;
@@ -259,7 +396,6 @@ export class ChatPanel {
       this.abortController = undefined;
       this.inputBar?.clear();
       this.inputBar?.focus();
-      void lastToolCallId;
     }
   }
 
@@ -276,21 +412,12 @@ export class ChatPanel {
     void this.onSend(this.lastUserPayload!);
   }
 
-  private onReset(): void {
-    this.abortController?.abort();
-    const old = this.plugin.sessions.activeSession();
-    const oldId = old?.id;
-    if (oldId) this.plugin.sessions.delete(oldId);
-    this.plugin.sessions.create();
-    this.refreshSession();
-    if (oldId) void this.plugin.store.delete(oldId).catch(() => {});
-  }
-
-  // --- helpers ------------------------------------------------------------
+  // --- helpers -------------------------------------------------------------
 
   private appendMessage(m: Message): void {
     const content = contentToString(m.content);
-    const bubble = new MessageBubble(this.app, this.messagesEl!, m.role);
+    const role = m.role === "tool" ? "system" : m.role;
+    const bubble = new MessageBubble(this.app, this.messagesEl!, role);
     this.bubbles.push(bubble);
     bubble.setContent(content);
     this.scrollToBottom();
@@ -316,7 +443,7 @@ export class ChatPanel {
   }
 
   destroy(): void {
-    this.plugin._onLangChange = undefined;
+    this.unsubLang?.();
     this.bubbles.forEach((b) => b.destroy());
     this.bubbles = [];
     this.inputBar?.destroy();

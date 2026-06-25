@@ -11,7 +11,8 @@ export function joinPath(...parts: string[]): string {
 export function dirname(path: string): string {
   const norm = normalizePath(path);
   const idx = norm.lastIndexOf("/");
-  return idx === -1 ? "/" : norm.slice(0, idx);
+  if (idx === -1) return norm === "" ? "" : ".";
+  return norm.slice(0, idx);
 }
 
 export function basename(path: string, stripExt = false): string {

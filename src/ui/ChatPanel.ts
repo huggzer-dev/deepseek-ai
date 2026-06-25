@@ -1,4 +1,4 @@
-import type { App, Editor, TFile } from "obsidian";
+import { type App, type Editor, type TFile, Notice } from "obsidian";
 import type DeepSeekPlugin from "../main";
 import { MessageBubble } from "./MessageBubble";
 import { ToolCallBubble } from "./ToolCallBubble";
@@ -99,9 +99,9 @@ export class ChatPanel {
     setIcon(editBtn, "square-pen");
     editBtn.addEventListener("click", () => this.onNewChat());
     // History button → reload the session list
-    const histBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "history" } });
+    const histBtn = actions.createEl("button", { cls: "dsai-tabbar__btn", attr: { "aria-label": "previous" } });
     setIcon(histBtn, "history");
-    histBtn.addEventListener("click", () => this.refreshSession());
+    histBtn.addEventListener("click", () => this.cycleToPreviousSession());
   }
 
   // --- status row (Effort + folder) and stats bar ------------------------
@@ -200,6 +200,21 @@ export class ChatPanel {
     void this.persistSession();
     this.plugin.sessions.restore(session);
     this.refreshSession();
+  }
+
+  /** History button: cycle to the previous (most recently updated) session. */
+  private cycleToPreviousSession(): void {
+    const all = this.plugin.sessions.list();
+    if (all.length <= 1) {
+      new Notice("Only one conversation in history");
+      return;
+    }
+    // Sort by updatedAt descending, find current, pick next
+    const sorted = [...all].sort((a, b) => b.updatedAt - a.updatedAt);
+    const currentId = this.plugin.sessions.activeSession()?.id;
+    const currentIdx = sorted.findIndex((s) => s.id === currentId);
+    const next = sorted[(currentIdx + 1) % sorted.length];
+    if (next) this.switchTo(next);
   }
 
   /** Start a brand-new conversation (keeps the old one in history). */

@@ -23,7 +23,7 @@ export class SessionManager {
   /** Bring back a previously persisted session into the in-memory map. */
   restore(session: AgentSession): AgentSession {
     this.sessions.set(session.id, session);
-    if (!this.active) this.active = session;
+    this.active = session;  // always update active — fixes tab switching
     return session;
   }
 

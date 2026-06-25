@@ -46,7 +46,6 @@ export type TranslationKey =
   | "approval.deny"
   | "tabs.untitled"
   | "ui.brand"
-  | "ui.sonnet"
   | "ui.effort"
   | "ui.yolo"
   | "ui.links"
@@ -117,7 +116,6 @@ const dicts: Record<Language, Dict> = {
     "tabs.untitled": "未命名会话",
     "tabs.newChat": "新建对话",
     "ui.brand": "deepseek-ai",
-    "ui.sonnet": "Sonnet",
     "ui.effort": "Effort",
     "ui.yolo": "YOLO",
     "ui.links": "反向链接",
@@ -185,7 +183,6 @@ const dicts: Record<Language, Dict> = {
     "tabs.untitled": "Untitled chat",
     "tabs.newChat": "New conversation",
     "ui.brand": "deepseek-ai",
-    "ui.sonnet": "Sonnet",
     "ui.effort": "Effort",
     "ui.yolo": "YOLO",
     "ui.links": "backlinks",

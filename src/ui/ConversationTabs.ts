@@ -29,21 +29,29 @@ export class ConversationTabs {
 
   private render(): void {
     this.el.empty();
-    sessions: for (let i = 0; i < this.sessions.length; i++) {
+    for (let i = 0; i < this.sessions.length; i++) {
       const s = this.sessions[i]!;
       const tab = this.el.createDiv({
         cls: `dsai-conv-tab${s.id === this.activeId ? " is-active" : ""}`,
         attr: { title: s.title || `Session ${i + 1}` },
       });
       tab.createSpan({ cls: "dsai-conv-tab__num", text: String(i + 1) });
-      tab.addEventListener("click", () => this.onAction("select", s.id));
-      const close = tab.createSpan({ cls: "dsai-conv-tab__close", text: "×" });
+      tab.addEventListener("click", (e) => {
+        // ignore clicks that originate on the close button
+        if ((e.target as HTMLElement).closest(".dsai-conv-tab__close")) return;
+        this.onAction("select", s.id);
+      });
+      // Close button: always visible, INSIDE the tab, large enough to hit
+      const close = tab.createEl("button", {
+        cls: "dsai-conv-tab__close",
+        attr: { type: "button", "aria-label": "close", title: "关闭此对话" },
+        text: "×",
+      });
       close.addEventListener("click", (e) => {
         e.stopPropagation();
+        e.preventDefault();
         this.onAction("close", s.id);
       });
     }
-    // No "+" new-tab button — sessions are created from the edit/reset
-    // action button on the right.
   }
 }

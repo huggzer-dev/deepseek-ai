@@ -255,17 +255,22 @@
 .dsai-conv-tab__num { line-height: 1; }
 .dsai-conv-tab__close {
   position: absolute;
-  top: -4px; right: -4px;
-  width: 14px; height: 14px;
-  display: none;
-  pointer-events: none;  /* safe: hidden = no clicks */
+  top: 0; right: 0;
+  width: 16px; height: 16px;
+  display: flex;
   align-items: center; justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1;
   background: var(--dsai-bg-2);
-  border-radius: 50%;
+  border: 1px solid var(--dsai-border);
+  border-radius: 0 var(--dsai-radius-sm) 0 var(--dsai-radius-sm);
   color: var(--dsai-text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  z-index: 1;  /* sit on top of the tab number */
 }
-.dsai-conv-tab:hover .dsai-conv-tab__close { display: flex; pointer-events: auto; }
+.dsai-conv-tab:hover .dsai-conv-tab__close { background: var(--dsai-error); color: #fff; border-color: var(--dsai-error); }
 .dsai-conv-tab__close:hover { color: var(--dsai-error); }
 .dsai-conv-tab__plus {
   flex: none;

@@ -1,6 +1,7 @@
 import { requestUrl } from "obsidian";
 import { DEEPSEEK_BASE_URL, MAX_TOKENS_LIMIT, MIN_TOKENS_LIMIT, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
 import { StreamParser } from "./StreamParser";
+import { asRequestError } from "./DeepSeekError";
 
 /** Clamp a value into the API's valid range, logging a warning if it had to move. */
 function clampMaxTokens(v: number): number {
@@ -47,7 +48,7 @@ export class DeepSeekProvider {
     });
 
     if (!resp.ok || !resp.body) {
-      throw new Error(`DeepSeek API ${resp.status}: ${await safeReadText(resp)}`);
+      throw await asError(resp);
     }
 
     const parser = new StreamParser(callbacks);
@@ -73,10 +74,19 @@ export class DeepSeekProvider {
       }),
       throw: false,
     });
-    if (resp.status >= 400) throw new Error(`DeepSeek FIM ${resp.status}: ${resp.text}`);
+    if (resp.status >= 400) throw asRequestError(resp.status, resp.text);
     const data = JSON.parse(resp.text) as { choices?: { text?: string }[] };
     return data.choices?.[0]?.text ?? "";
   }
+}
+
+/**
+ * Translate a non-2xx response into a human-readable Error.
+ * 401 → invalid key · 402 → out of balance · 429 → rate limited · else → raw.
+ */
+async function asError(resp: Response): Promise<Error> {
+  const body = await safeReadText(resp);
+  return asRequestError(resp.status, body);
 }
 
 async function safeReadText(resp: Response): Promise<string> {

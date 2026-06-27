@@ -153,8 +153,7 @@ deepseek-obsidian/
 │   │   │   ├── AutoTag.ts          # 智能标签建议
 │   │   │   └── LinkSuggestion.ts   # 双向链接建议
 │   │   └── external/
-│   │       ├── WebFetch.ts      # 抓取网页内容
-│   │       └── ShellCommand.ts  # 执行 Shell 命令（需用户授权）
+│   │       └── WebFetch.ts      # 抓取网页内容（需用户授权）
 │   │
 │   ├── ui/
 │   │   ├── ChatView.ts          # 侧边栏聊天视图（Obsidian ItemView）
@@ -250,7 +249,7 @@ enum RiskLevel {
   READ_ONLY,    // 只读：read_file, search, list_dir, get_selection
   EDIT_SAFE,    // 安全编辑：insert_at_cursor, replace_selection（有撤销支持）
   EDIT_DANGER,  // 危险编辑：write_file, move_rename（覆盖/移动文件）
-  EXTERNAL,     // 外部操作：shell_command, web_fetch（需显式授权）
+  EXTERNAL,     // 外部操作：web_fetch（需显式授权）
 }
 ```
 

@@ -77,8 +77,8 @@ This is a test note. Use `@[[notes/welcome]]` in the chat sidebar
 to reference it as context.
 EOF
 
-cat > "$VAULT/notes/todo.md" <<'EOF'
-# TODO
+cat > "$VAULT/notes/tasks.md" <<'EOF'
+# Task list
 
 - [x] Set up test vault
 - [ ] Send first chat message

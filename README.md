@@ -14,7 +14,7 @@
 - **Skill templates** — `$summarize`, `$translate`, `$outline`, `$brainstorm`, `$review`
 - **Instruction mode** — `# instruction` prepends turn-level directives
 - **Mobile support** — Works on iOS and Android (Obsidian mobile)
-- **MCP Client** — Optional connect MCP tool servers via HTTP/stdio (desktop)
+- **MCP Client** — Optional connect MCP tool servers via HTTP
 - **i18n** — 简体中文 / English interface
 
 ## Installation
@@ -63,8 +63,8 @@ Copy `main.js`, `manifest.json`, `styles.css` to your vault's `.obsidian/plugins
 ```
 User Input → ChatPanel → AgentLoop (ReAct loop) → DeepSeek API
                           ↕                          ↕
-                   ToolRegistry ←→ Vault Tools   Stream Parser
-                     + MCP                    (SSE → text deltas)
+                   ToolRegistry ←→ Vault Tools   Provider
+                     + MCP                    (requestUrl)
 Tool approval         ↓
 Modal (if needed) ← AgentLoop → back to LLM
 ```

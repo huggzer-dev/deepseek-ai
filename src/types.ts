@@ -126,7 +126,7 @@ export interface ChatResult {
 }
 
 // ---------------------------------------------------------------------------
-// Agent events (streamed out of the loop)
+// Agent events emitted out of the loop
 // ---------------------------------------------------------------------------
 
 export type AgentEvent =
@@ -174,7 +174,7 @@ export interface ToolContext {
   signal?: AbortSignal;
   /** True when stop was requested. Tools can short-circuit. */
   aborted?: boolean;
-  /** Stream text deltas back to the UI as they arrive from the model. */
+  /** Emit text deltas back to the UI as provider responses arrive. */
   emitText?: (delta: string) => void;
 }
 

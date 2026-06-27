@@ -8,7 +8,7 @@ import { debounce } from "../utils/debounce";
  *   assistant  → left-aligned, no bubble (plain text)
  *   system/tool → centered, no bubble, muted
  *
- * Supports streamed assistant replies:
+ * Supports incremental assistant replies:
  *   start → appendDelta(...) → finish()
  * Re-renders markdown on every debounced chunk so blocks solidify.
  */

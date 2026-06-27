@@ -13,8 +13,10 @@ export function asRequestError(status: number, body: string): Error {
   // Try to extract the API's `message` field
   let apiMsg = body;
   try {
-    const parsed = JSON.parse(body) as { error?: { message?: string } };
-    if (parsed.error?.message) apiMsg = parsed.error.message;
+    const parsed: unknown = JSON.parse(body);
+    if (isRecord(parsed) && isRecord(parsed.error) && typeof parsed.error.message === "string") {
+      apiMsg = parsed.error.message;
+    }
   } catch {
     /* leave body as-is */
   }
@@ -42,4 +44,8 @@ export function asRequestError(status: number, body: string): Error {
       break;
   }
   return new Error(`DeepSeek API ${status}: ${apiMsg}${hint}`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }

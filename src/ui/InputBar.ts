@@ -44,7 +44,7 @@ export class InputBar {
       this.textarea.addEventListener("keydown", (e) => this.onKey(e));
       // Drag-drop for images
       this.textarea.addEventListener("dragover", (e) => { e.preventDefault(); });
-      bar.addEventListener("drop", (e) => { e.preventDefault(); this.handleImageDrop(e); });
+      bar.addEventListener("drop", (e) => { e.preventDefault(); void this.handleImageDrop(e); });
 
       this.sendBtn = bar.createEl("button", {
         text: translate(this.plugin.settings.language, "chat.send"),

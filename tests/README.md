@@ -50,7 +50,7 @@ checklist below.
 - [ ] Plugin loads without errors in Obsidian console
 - [ ] Click ✦ ribbon icon → chat sidebar appears
 - [ ] Settings tab opens, save API key
-- [ ] Send "hello" → streamed reply appears
+- [ ] Send "hello" → reply appears
 - [ ] Reset button clears the conversation
 
 ### Phase 2: agent + tools

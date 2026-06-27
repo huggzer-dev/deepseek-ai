@@ -30,4 +30,22 @@ describe("release readiness", () => {
 
     assert.deepEqual(hits, []);
   });
+
+  test("source files avoid Obsidian review-blocked APIs", () => {
+    const root = process.cwd();
+    const blocked = [
+      { label: "raw fetch", pattern: /\bfetch\s*\(/ },
+      { label: "child_process", pattern: /child_process/ },
+    ];
+    const hits = sourceFiles(join(root, "src")).flatMap((file) => {
+      const lines = readFileSync(file, "utf8").split(/\r?\n/);
+      return lines.flatMap((line, index) =>
+        blocked
+          .filter(({ pattern }) => pattern.test(line))
+          .map(({ label }) => ({ label, file: relative(root, file), line: index + 1, text: line.trim() })),
+      );
+    });
+
+    assert.deepEqual(hits, []);
+  });
 });

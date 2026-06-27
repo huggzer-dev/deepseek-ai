@@ -40,7 +40,7 @@ function truncate(text: string): { text: string; truncated: boolean } {
 /**
  * The core ReAct loop.
  *  1. ContextBuilder prepares system + history + user (with @mentions included by caller)
- *  2. Call DeepSeek streaming; emit text deltas as they arrive
+ *  2. Call DeepSeek and emit text deltas through the provider callback
  *  3. If the model returns tool_calls, run each (with approval if needed), emit results,
  *     append a `tool` role message per result, then loop back to step 2
  *  4. Stop when there are no more tool_calls or we hit the loop cap.
@@ -68,7 +68,7 @@ export class AgentLoop {
 
       let assistantMessage: Message;
       try {
-        assistantMessage = await this.streamOnce(messagesForApi, tools, ctx, input);
+        assistantMessage = await this.requestOnce(messagesForApi, tools, ctx, input);
       } catch (err: unknown) {
         if (ctx.aborted) {
           yield { type: "error", message: "stopped" };
@@ -87,12 +87,7 @@ export class AgentLoop {
 
       // Execute each tool call sequentially (keeps approval UX sane).
       for (const tc of toolCalls) {
-        let args: Record<string, unknown> = {};
-        try {
-          args = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
-        } catch {
-          args = { __parseError: tc.function.arguments };
-        }
+        const args = parseToolArguments(tc.function.arguments);
         const tool = this.registry.get(tc.function.name);
         const riskLevel = tool?.riskLevel ?? 0;
         const requiresApproval = shouldRequireToolApproval(riskLevel, this.settings);
@@ -154,8 +149,7 @@ export class AgentLoop {
     }
   }
 
-  private async streamOnce(messages: Message[], tools: ReturnType<ContextBuilder["toolSchemas"]>, ctx: ToolContext, _input: ContextInput): Promise<Message> {
-    let partial = "";
+  private async requestOnce(messages: Message[], tools: ReturnType<ContextBuilder["toolSchemas"]>, ctx: ToolContext, _input: ContextInput): Promise<Message> {
     const toolCalls: ToolCall[] = [];
     const result = await this.provider.chat(
       messages,
@@ -169,7 +163,6 @@ export class AgentLoop {
       },
       {
         onTextDelta: (delta) => {
-          partial += delta;
           ctx.emitText?.(delta);
         },
         onToolCallDelta: (idx, tc) => {
@@ -177,7 +170,19 @@ export class AgentLoop {
         },
       },
     );
-    void partial;
     return result.message;
+  }
+}
+
+function parseToolArguments(raw: string): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return { value: parsed };
+  } catch {
+    return { __parseError: raw };
   }
 }

@@ -68,7 +68,7 @@ export default class DeepSeekPlugin extends Plugin {
     this.mcpManager = new MCPManager(this.tools);
 
     // Seed a couple of built-in skills if the skills dir is empty.
-    this.seedBuiltinSkills();
+    await this.seedBuiltinSkills();
 
     const saved = await this.store.loadAll();
     if (saved.length) {
@@ -101,12 +101,10 @@ export default class DeepSeekPlugin extends Plugin {
     this.addSettingTab(new DeepSeekSettingsTab(this.app, this));
   }
 
-  async onunload(): Promise<void> {
-    try {
-      await this.store.saveAll(this.sessions.list());
-    } catch (err: unknown) {
+  onunload(): void {
+    void this.store.saveAll(this.sessions.list()).catch((err: unknown) => {
       logger.warn("failed to persist sessions on unload", err);
-    }
+    });
   }
 
   async activateChatView(): Promise<void> {
@@ -121,7 +119,7 @@ export default class DeepSeekPlugin extends Plugin {
       await right.setViewState({ type: VIEW_TYPE_CHAT, active: true });
       leaf = right;
     }
-    workspace.revealLeaf(leaf);
+    await workspace.revealLeaf(leaf);
   }
 
   async loadSettings(): Promise<void> {

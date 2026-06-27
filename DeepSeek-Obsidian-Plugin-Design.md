@@ -42,7 +42,7 @@
 │  │        │              │                 │            │  │
 │  │  ┌─────┴──────────────┴─────────────────┴────────┐  │  │
 │  │  │            LLM Provider 适配层                 │  │  │
-│  │  │  DeepSeek Chat API / FIM / 流式 SSE           │  │  │
+│  │  │  DeepSeek Chat API / FIM                     │  │  │
 │  │  └───────────────────────────────────────────────┘  │  │
 │  └─────────────────────────────────────────────────────┘  │
 │                        │                                   │
@@ -75,7 +75,7 @@
 | **Instruction Mode (#)** | `#` 触发自定义指令输入，作为本次对话的额外 system message |
 | **Multi-Tab Conversations** | 每个标签独立 Agent 会话，持久化到 `vault/.deepseek/` |
 | **Fork / Resume** | 从任意历史消息分叉，创建新对话分支 |
-| **MCP Servers** | 可选内置 MCP Client（stdio / SSE / HTTP），连接外部工具 |
+| **MCP Servers** | 可选内置 MCP Client（HTTP），连接外部工具 |
 | **图片视觉分析** | DeepSeek 支持 vision，拖入图片即可分析 |
 
 ---
@@ -88,14 +88,14 @@
 | 构建 | esbuild | Obsidian 插件标配，快 |
 | UI 框架 | Preact + hooks | 轻量（3KB），无需 React 生态 |
 | 状态管理 | Zustand | 极简，适合插件场景 |
-| HTTP | 原生 `fetch` + ReadableStream | 流式 SSE 解析，零依赖 |
+| HTTP | Obsidian `requestUrl` | 符合社区插件审核规则，零运行时依赖 |
 | 数据持久化 | Obsidian `PluginData` API + JSON 文件 | 官方推荐方式 |
 | Markdown 解析 | `obsidian` 内置 MarkdownRenderer | 渲染对话内容 |
 
 ### 不引入的依赖（与 Claudian 的关键区别）
 
-- 不依赖任何外部 CLI 进程（无需 `child_process.spawn`）
-- 不引入 `openai` npm 包（直接用 fetch，DeepSeek API 格式简单）
+- 不依赖任何外部 CLI 进程
+- 不引入 `openai` npm 包（直接调用 DeepSeek HTTP API）
 - 不引入 `better-sqlite3` 等 native 模块（避免跨平台编译问题）
 
 ---
@@ -127,7 +127,6 @@ deepseek-obsidian/
 │   │
 │   ├── llm/
 │   │   ├── DeepSeekProvider.ts # DeepSeek API 调用（chat + FIM）
-│   │   ├── StreamParser.ts     # SSE 流式解析
 │   │   ├── types.ts            # Message / ToolCall / Token 类型
 │   │   └── TokenCounter.ts     # Token 估算（用于上下文窗口管理）
 │   │
@@ -176,7 +175,7 @@ deepseek-obsidian/
 │   │       └── review.md
 │   │
 │   ├── mcp/
-│   │   ├── MCPClient.ts         # MCP 客户端（stdio/SSE/HTTP）
+│   │   ├── MCPClient.ts         # MCP 客户端（HTTP）
 │   │   ├── MCPToolAdapter.ts    # MCP Tool → 内部 Tool 适配
 │   │   └── MCPManager.ts        # MCP 服务器生命周期管理
 │   │
@@ -278,7 +277,8 @@ async function chat(
   onChunk: (delta: string) => void,
   signal: AbortSignal
 ): Promise<DeepSeekMessage> {
-  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+  const response = await requestUrl({
+    url: 'https://api.deepseek.com/v1/chat/completions',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -289,14 +289,12 @@ async function chat(
       messages,
       tools,
       tool_choice: 'auto',
-      stream: true,
+      stream: false,
       max_tokens: 8192,
     }),
-    signal,
+    throw: false,
   });
-
-  // SSE 流式解析...
-  // 累积 tool_calls，实时推送 text delta
+  // 解析 message/tool_calls 并交给 AgentLoop 继续执行
 }
 ```
 
@@ -381,7 +379,7 @@ class ContextManager {
 
 - [ ] 知识检索：AutoTag、LinkSuggestion
 - [ ] 可选语义搜索（Embedding + 向量存储）
-- [ ] MCP Client（stdio/SSE/HTTP）
+- [ ] MCP Client（HTTP）
 - [ ] Shell 命令执行（高级权限模型）
 - [ ] 性能优化 + 上下文压缩
 - [ ] 发布到 Obsidian Community Plugins

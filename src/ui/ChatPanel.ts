@@ -241,7 +241,7 @@ export class ChatPanel {
     return map[this.plugin.settings.effort] ?? "High";
   }
 
-  // --- send / stream -------------------------------------------------------
+  // --- send ---------------------------------------------------------------
 
   private async onSend(parsed: ParsedInput): Promise<void> {
     this.lastUserPayload = parsed;

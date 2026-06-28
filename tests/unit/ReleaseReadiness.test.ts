@@ -17,6 +17,21 @@ function sourceFiles(dir: string, acc: string[] = []): string[] {
 }
 
 describe("release readiness", () => {
+  test("declares an Obsidian minAppVersion that supports the APIs in use", () => {
+    const root = process.cwd();
+    const settingsSource = readFileSync(join(root, "src/settings/SettingsTab.ts"), "utf8");
+    const usesDeclarativeSettings = /getSettingDefinitions\(|this\.update\(/.test(settingsSource);
+    if (!usesDeclarativeSettings) return;
+
+    const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8")) as { minAppVersion?: string; version?: string };
+    const versions = JSON.parse(readFileSync(join(root, "versions.json"), "utf8")) as Record<string, string>;
+    assert.ok(manifest.minAppVersion);
+    assert.ok(atLeastVersion(manifest.minAppVersion, "1.13.0"), `manifest minAppVersion ${manifest.minAppVersion} must be at least 1.13.0`);
+    if (manifest.version) {
+      assert.ok(atLeastVersion(versions[manifest.version] ?? "0.0.0", "1.13.0"), `versions.json ${manifest.version} must be at least 1.13.0`);
+    }
+  });
+
   test("source files do not ship placeholder implementations", () => {
     const root = process.cwd();
     const markers = ["TO" + "DO", "FIX" + "ME", "HA" + "CK", "X" + "XX", "not " + "implemented", "st" + "ub"];
@@ -72,3 +87,15 @@ describe("release readiness", () => {
     assert.deepEqual(hits, []);
   });
 });
+
+function atLeastVersion(actual: string, required: string): boolean {
+  const actualParts = actual.split(".").map(Number);
+  const requiredParts = required.split(".").map(Number);
+  for (let i = 0; i < Math.max(actualParts.length, requiredParts.length); i += 1) {
+    const a = actualParts[i] ?? 0;
+    const r = requiredParts[i] ?? 0;
+    if (a > r) return true;
+    if (a < r) return false;
+  }
+  return true;
+}

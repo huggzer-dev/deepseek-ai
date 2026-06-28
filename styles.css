@@ -5,21 +5,38 @@
 :root {
   --dsai-accent:        #f97316;     /* brand orange */
   --dsai-accent-2:      #fb923c;
-  --dsai-accent-soft:   #fff7ed;
-  --dsai-border:        #e5e5e5;
-  --dsai-border-strong: #d4d4d4;
-  --dsai-bg:            #fafafa;
-  --dsai-bg-2:          #f4f4f5;
-  --dsai-bg-3:          #e4e4e7;
-  --dsai-text:          #18181b;
-  --dsai-text-muted:    #71717a;
-  --dsai-bubble-user:   #e4e4e7;
+  --dsai-accent-soft:   rgba(249, 115, 22, .12);
+  --dsai-border:        var(--background-modifier-border, #e5e5e5);
+  --dsai-border-strong: var(--background-modifier-border-hover, #d4d4d4);
+  --dsai-bg:            var(--background-primary, #fafafa);
+  --dsai-bg-2:          var(--background-secondary, #f4f4f5);
+  --dsai-bg-3:          var(--background-modifier-hover, #e4e4e7);
+  --dsai-text:          var(--text-normal, #18181b);
+  --dsai-text-muted:    var(--text-muted, #71717a);
+  --dsai-bubble-user:   var(--background-modifier-hover, #e4e4e7);
   --dsai-tab-active:    #8b5cf6;
-  --dsai-error:         #ef4444;
-  --dsai-success:       #10b981;
+  --dsai-error:         var(--text-error, #ef4444);
+  --dsai-success:       var(--text-success, #10b981);
   --dsai-radius:        10px;
   --dsai-radius-lg:     16px;
   --dsai-radius-sm:     6px;
+}
+
+body.theme-dark {
+  --dsai-accent:        #fb923c;
+  --dsai-accent-2:      #f97316;
+  --dsai-accent-soft:   rgba(251, 146, 60, .14);
+  --dsai-border:        var(--background-modifier-border, #343434);
+  --dsai-border-strong: var(--background-modifier-border-hover, #4a4a4a);
+  --dsai-bg:            var(--background-primary, #1e1e1e);
+  --dsai-bg-2:          var(--background-secondary, #252525);
+  --dsai-bg-3:          var(--background-modifier-hover, #303030);
+  --dsai-text:          var(--text-normal, #dcddde);
+  --dsai-text-muted:    var(--text-muted, #a8a8a8);
+  --dsai-bubble-user:   var(--background-modifier-hover, #303030);
+  --dsai-tab-active:    var(--interactive-accent, #a78bfa);
+  --dsai-error:         var(--text-error, #ff6b6b);
+  --dsai-success:       var(--text-success, #4ade80);
 }
 
 /* ---- root container ---- */

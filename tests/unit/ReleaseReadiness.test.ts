@@ -86,6 +86,17 @@ describe("release readiness", () => {
 
     assert.deepEqual(hits, []);
   });
+
+  test("chat styles follow Obsidian light and dark theme variables", () => {
+    const root = process.cwd();
+    const styles = readFileSync(join(root, "styles.css"), "utf8");
+
+    assert.match(styles, /body\.theme-dark\s*\{/);
+    assert.match(styles, /--dsai-bg:\s*var\(--background-primary/);
+    assert.match(styles, /--dsai-bg-2:\s*var\(--background-secondary/);
+    assert.match(styles, /--dsai-text:\s*var\(--text-normal/);
+    assert.match(styles, /--dsai-text-muted:\s*var\(--text-muted/);
+  });
 });
 
 function atLeastVersion(actual: string, required: string): boolean {

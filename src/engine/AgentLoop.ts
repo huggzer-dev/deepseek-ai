@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import type { DeepSeekProvider } from "../llm/DeepSeekProvider";
 import type { ContextBuilder } from "./ContextBuilder";
+import { buildUserMessageContent } from "./ContextBuilder";
 import type { ToolRegistry } from "../tools/ToolRegistry";
 import { ApprovalModal } from "../ui/ApprovalModal";
 import { shouldRequireToolApproval } from "./ApprovalPolicy";
@@ -57,7 +58,7 @@ export class AgentLoop {
   async *run(session: AgentSession, input: ContextInput, ctx: ToolContext): AsyncGenerator<AgentEvent, void, unknown> {
     let loops = 0;
     const maxLoops = this.settings.maxAgentLoops;
-    const userMessage: Message = { role: "user", content: input.userInput };
+    const userMessage: Message = { role: "user", content: buildUserMessageContent(input) };
     session.messages.push(userMessage);
 
     while (loops < maxLoops) {
@@ -157,6 +158,7 @@ export class AgentLoop {
         model: this.settings.model,
         maxTokens: this.settings.maxTokens,
         temperature: this.settings.temperature,
+        effort: this.settings.effort,
         tools: tools.length ? tools : undefined,
         toolChoice: tools.length ? "auto" : undefined,
         signal: ctx.signal,

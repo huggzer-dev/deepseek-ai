@@ -92,6 +92,7 @@ export interface ChatOptions {
   model: DeepSeekModelId;
   maxTokens: number;
   temperature: number;
+  effort?: Effort;
   tools?: ToolSchema[];
   toolChoice?: "auto" | "none" | { type: "function"; function: { name: string } };
   signal?: AbortSignal;
@@ -223,6 +224,8 @@ export interface ContextInput {
   selection?: string;
   instruction?: string; // # mode
   skill?: string; // $ mode
+  /** Text blocks uploaded from local files through the chat input. */
+  uploadedFiles?: string[];
   /** base64 data-URL images for vision analysis. */
   images?: string[];
 }

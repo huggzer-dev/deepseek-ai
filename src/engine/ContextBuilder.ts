@@ -48,7 +48,15 @@ export class ContextBuilder {
   buildMessages(history: Message[], input: ContextInput, extraContext: string[] = []): Message[] {
     const system: Message = { role: "system", content: this.buildSystemPrompt() };
     const userContent = [input.userInput, ...extraContext].filter(Boolean).join("\n\n");
-    const user: Message = { role: "user", content: userContent };
+    const user: Message = { role: "user", content: buildUserMessageContent({ ...input, userInput: userContent }) };
     return [system, ...history, user];
   }
+}
+
+export function buildUserMessageContent(input: ContextInput): Message["content"] {
+  if (!input.images?.length) return input.userInput;
+  return [
+    { type: "text", text: input.userInput || "Please analyze the attached image." },
+    ...input.images.map((url) => ({ type: "image_url" as const, image_url: { url, detail: "auto" as const } })),
+  ];
 }

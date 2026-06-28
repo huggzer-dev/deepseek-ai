@@ -2,11 +2,15 @@ import type { AgentSession } from "../types";
 
 export type TabAction = "select" | "close" | "new";
 
+export function shouldCloseSessionFromPointer(event: Pick<MouseEvent, "buttons">): boolean {
+  return event.buttons === 3;
+}
+
 /**
  * Numbered tab bar — matches the Claudian / Obsidian reference:
  * each session is a small bordered box showing its index (1, 2, 3 …).
- * A "+" button at the end creates a new session. Action buttons
- * (edit, history) live in the parent tab bar, right-aligned.
+ * Closing is triggered by pressing left and right mouse buttons together on
+ * the tab. Action buttons (edit, history) live in the parent tab bar.
  */
 export class ConversationTabs {
   readonly el: HTMLElement;
@@ -29,28 +33,21 @@ export class ConversationTabs {
 
   private render(): void {
     this.el.empty();
-    for (let i = 0; i < this.sessions.length; i++) {
-      const s = this.sessions[i]!;
+    for (const [i, s] of this.sessions.entries()) {
       const tab = this.el.createDiv({
         cls: `dsai-conv-tab${s.id === this.activeId ? " is-active" : ""}`,
-        attr: { title: s.title || `Session ${i + 1}` },
+        attr: { title: `${s.title || `Session ${i + 1}`} · 左右键同时点击关闭` },
       });
       tab.createSpan({ cls: "dsai-conv-tab__num", text: String(i + 1) });
-      tab.addEventListener("click", (e) => {
-        // ignore clicks that originate on the close button
-        if ((e.target as HTMLElement).closest(".dsai-conv-tab__close")) return;
+      tab.addEventListener("mousedown", (e) => {
+        if (shouldCloseSessionFromPointer(e)) {
+          e.preventDefault();
+          this.onAction("close", s.id);
+        }
+      });
+      tab.addEventListener("contextmenu", (e) => e.preventDefault());
+      tab.addEventListener("click", () => {
         this.onAction("select", s.id);
-      });
-      // Close button: always visible, INSIDE the tab, large enough to hit
-      const close = tab.createEl("button", {
-        cls: "dsai-conv-tab__close",
-        attr: { type: "button", "aria-label": "close", title: "关闭此对话" },
-        text: "×",
-      });
-      close.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        this.onAction("close", s.id);
       });
     }
   }

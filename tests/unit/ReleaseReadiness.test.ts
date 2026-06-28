@@ -48,4 +48,23 @@ describe("release readiness", () => {
 
     assert.deepEqual(hits, []);
   });
+
+  test("source files avoid review-warning patterns", () => {
+    const root = process.cwd();
+    const warningPatterns = [
+      { label: "deprecated setDynamicTooltip", pattern: /setDynamicTooltip\(/ },
+      { label: "global timer", pattern: /(^|[^.])\b(?:setTimeout|clearTimeout)\(/ },
+      { label: "non-Error promise rejection", pattern: /reject\(reader\.error\)/ },
+    ];
+    const hits = sourceFiles(join(root, "src")).flatMap((file) => {
+      const lines = readFileSync(file, "utf8").split(/\r?\n/);
+      return lines.flatMap((line, index) =>
+        warningPatterns
+          .filter(({ pattern }) => pattern.test(line))
+          .map(({ label }) => ({ label, file: relative(root, file), line: index + 1, text: line.trim() })),
+      );
+    });
+
+    assert.deepEqual(hits, []);
+  });
 });

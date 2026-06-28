@@ -68,6 +68,7 @@ export class InlineEditModal extends Modal {
       return;
     }
     if (!this.promptInput || !this.diffHost) return;
+    const diffHost = this.diffHost;
     const instruction = this.promptInput.value.trim();
     if (!instruction) return;
 
@@ -97,7 +98,7 @@ ${ctxLine}`;
       ).join("\n") : (result.message.content ?? "");
       this.newText = rawContent.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
       const diff = computeDiff(this.oldText, this.newText);
-      applyDiffToElement(this.diffHost!, diff);
+      applyDiffToElement(diffHost, diff);
 
       const acceptRow = this.contentEl.createDiv({ cls: "deepseek-inline__post" });
       new Setting(acceptRow)

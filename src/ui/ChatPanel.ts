@@ -1,4 +1,4 @@
-import { type App, type Editor, type TFile, Notice } from "obsidian";
+import { type App, type Editor, type TFile, Menu, Notice, setIcon } from "obsidian";
 import type DeepSeekPlugin from "../main";
 import { MessageBubble } from "./MessageBubble";
 import { ToolCallBubble } from "./ToolCallBubble";
@@ -6,8 +6,9 @@ import { InputBar, type ParsedInput } from "./InputBar";
 import { ConversationTabs } from "./ConversationTabs";
 import { translate } from "../i18n";
 import { logger } from "../utils/logger";
-import type { Message, ToolContext, ContextInput } from "../types";
-import { setIcon } from "obsidian";
+import { DEEPSEEK_MODELS, type DeepSeekModelId, type Effort, type Message, type ToolContext, type ContextInput } from "../types";
+import { chatControlLabel, EFFORT_OPTIONS, effortLabel, modelLabel } from "./ChatControls";
+import { formatUploadedFileContext } from "./UploadAttachment";
 
 /**
  * Owns the chat sidebar:
@@ -104,21 +105,19 @@ export class ChatPanel {
     histBtn.addEventListener("click", () => this.cycleToPreviousSession());
   }
 
-  // --- status row (Effort + folder) and stats bar ------------------------
+  // --- status row (Model + effort + folder) and stats bar ----------------
 
   private renderStatusRow(parent: HTMLElement): void {
-    const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
-
     const bar = parent.createDiv({ cls: "dsai-statusbar" });
 
-    const effort = bar.createEl("button", { cls: "dsai-statusbar__chip", text: `${t("ui.effort")}: ${this.effortLabel()}` });
-    setIcon(effort, "zap");
+    const effort = bar.createEl("button", { cls: "dsai-statusbar__chip" });
     this.effortBtn = effort;
-    effort.addEventListener("click", () => this.cycleEffort());
+    this.refreshChatControl();
+    effort.addEventListener("click", (event) => this.openChatControlMenu(event));
 
     const folder = bar.createEl("button", { cls: "dsai-statusbar__chip", attr: { "aria-label": "attach" } });
     setIcon(folder, "folder");
-    folder.addEventListener("click", () => this.inputBar?.focus());
+    folder.addEventListener("click", () => this.inputBar?.openFilePicker());
   }
 
   /** Bottom stats bar — backlinks / word / char counts with eye toggle. */
@@ -224,21 +223,56 @@ export class ChatPanel {
     this.refreshSession();
   }
 
-  // --- settings actions (effort only — Sonnet / YOLO removed per design) -
+  // --- settings actions ---------------------------------------------------
 
-  private async cycleEffort(): Promise<void> {
-    const order = ["low", "medium", "high"] as const;
-    const i = order.indexOf(this.plugin.settings.effort);
-    this.plugin.settings.effort = order[(i + 1) % order.length]!;
+  private openChatControlMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    for (const model of DEEPSEEK_MODELS) {
+      menu.addItem((item) => {
+        item
+          .setTitle(`Model: ${modelLabel(model.id)}`)
+          .setChecked(this.plugin.settings.model === model.id)
+          .onClick(() => {
+            void this.setModel(model.id);
+          });
+      });
+    }
+    menu.addSeparator();
+    for (const effort of EFFORT_OPTIONS) {
+      menu.addItem((item) => {
+        item
+          .setTitle(`Effort: ${effortLabel(effort)}`)
+          .setChecked(this.plugin.settings.effort === effort)
+          .onClick(() => {
+            void this.setEffort(effort);
+          });
+      });
+    }
+    menu.showAtMouseEvent(event);
+  }
+
+  private async setModel(model: DeepSeekModelId): Promise<void> {
+    this.plugin.settings.model = model;
     await this.plugin.saveSettings();
+    this.refreshChatControl();
+  }
+
+  private async setEffort(effort: Effort): Promise<void> {
+    this.plugin.settings.effort = effort;
+    await this.plugin.saveSettings();
+    this.refreshChatControl();
+  }
+
+  private refreshChatControl(): void {
     if (this.effortBtn) {
-      this.effortBtn.textContent = `${translate(this.plugin.settings.language, "ui.effort")}: ${this.effortLabel()}`;
+      this.effortBtn.empty();
+      setIcon(this.effortBtn, "zap");
+      this.effortBtn.createSpan({ text: this.chatControlText() });
     }
   }
 
-  private effortLabel(): string {
-    const map: Record<string, string> = { low: "Low", medium: "Med", high: "High" };
-    return map[this.plugin.settings.effort] ?? "High";
+  private chatControlText(): string {
+    return chatControlLabel(this.plugin.settings.model, this.plugin.settings.effort);
   }
 
   // --- send ---------------------------------------------------------------
@@ -269,7 +303,8 @@ export class ChatPanel {
     }
     const skillBlock = parsed.skillBody ? `## Skill template\n\n${parsed.skillBody}` : "";
     const instrBlock = parsed.instruction ? `## Additional instruction\n\n${parsed.instruction}` : "";
-    const userContent = [parsed.text, ...mentionContents, skillBlock, instrBlock].filter(Boolean).join("\n\n");
+    const uploadedBlocks = parsed.uploadedFiles.map(formatUploadedFileContext);
+    const userContent = [parsed.text, ...mentionContents, ...uploadedBlocks, skillBlock, instrBlock].filter(Boolean).join("\n\n");
 
     const session = this.plugin.sessions.activeSession();
     if (!session) {
@@ -283,6 +318,7 @@ export class ChatPanel {
       userInput: userContent,
       mentions: [],
       images: parsed.images,
+      uploadedFiles: uploadedBlocks,
       instruction: parsed.instruction,
       skill: parsed.skillBody ? "(pre-injected)" : undefined,
     };
@@ -297,7 +333,7 @@ export class ChatPanel {
       emitText: undefined,
     };
 
-    const assistantBubble = new MessageBubble(this.app, this.messagesEl!, "assistant");
+    const assistantBubble = new MessageBubble(this.app, this.messagesEl, "assistant");
     this.bubbles.push(assistantBubble);
     assistantBubble.startStreaming();
 
@@ -320,7 +356,7 @@ export class ChatPanel {
             break;
           case "tool_call": {
             assistantBubble.finish();
-            const bubble = new ToolCallBubble(this.messagesEl!, ev.name, ev.args, ev.riskLevel);
+            const bubble = new ToolCallBubble(this.messagesEl, ev.name, ev.args, ev.riskLevel);
             toolBubbles.set(ev.id, bubble);
             break;
           }
@@ -375,10 +411,11 @@ export class ChatPanel {
   }
 
   private retry(): void {
-    if (!this.lastUserPayload) return;
+    const payload = this.lastUserPayload;
+    if (!payload) return;
     const last = this.bubbles.at(-1);
     if (last?.el.classList.contains("is-error")) last.destroy();
-    void this.onSend(this.lastUserPayload!);
+    void this.onSend(payload);
   }
 
   // --- helpers -------------------------------------------------------------
@@ -386,14 +423,14 @@ export class ChatPanel {
   private appendMessage(m: Message): void {
     const content = contentToString(m.content);
     const role = m.role === "tool" ? "system" : m.role;
-    const bubble = new MessageBubble(this.app, this.messagesEl!, role);
+    const bubble = new MessageBubble(this.app, this.messagesEl, role);
     this.bubbles.push(bubble);
     bubble.setContent(content);
     this.scrollToBottom();
   }
 
   private appendError(message: string): void {
-    const bubble = new MessageBubble(this.app, this.messagesEl!, "assistant");
+    const bubble = new MessageBubble(this.app, this.messagesEl, "assistant");
     this.bubbles.push(bubble);
     bubble.markError(message);
     this.scrollToBottom();

@@ -2,6 +2,7 @@ import { App, TFile, Notice } from "obsidian";
 import type DeepSeekPlugin from "../main";
 import { translate } from "../i18n";
 import { MentionSuggest } from "./MentionSuggest";
+import { formatUploadedFileContext, isTextUpload, MAX_TEXT_UPLOAD_BYTES, type UploadedTextFile } from "./UploadAttachment";
 
 export interface ParsedInput {
   text: string;
@@ -10,6 +11,8 @@ export interface ParsedInput {
   skillBody?: string;
   /** base64 data-URL images attached via drag / paste. */
   images: string[];
+  /** Local text files attached through the folder button. */
+  uploadedFiles: UploadedTextFile[];
 }
 
 /** Bottom input bar: textarea + send/stop button, parses @[[path]] mentions, $ skills,
@@ -22,6 +25,7 @@ export class InputBar {
   private sending = false;
   /** base64 data-URLs of attached images. */
   private attachedImages: string[] = [];
+  private uploadedTextFiles: UploadedTextFile[] = [];
 
   constructor(
     private app: App,
@@ -69,12 +73,25 @@ export class InputBar {
 
   private clearAttachments(): void {
     this.attachedImages = [];
+    this.uploadedTextFiles = [];
     this.attachmentBar.empty();
   }
 
   /** For the text-only user content we pass to the agent. */
   images(): string[] {
     return this.attachedImages;
+  }
+
+  openFilePicker(): void {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.accept = "image/*,.txt,.md,.markdown,.csv,.json,.yaml,.yml,.xml,.html,.css,.js,.ts,.tsx,.log";
+    input.addEventListener("change", () => {
+      void this.addPickedFiles(Array.from(input.files ?? []));
+      input.remove();
+    });
+    input.click();
   }
 
   setSending(isSending: boolean): void {
@@ -94,7 +111,7 @@ export class InputBar {
 
   async parse(raw: string): Promise<ParsedInput> {
     const mentions: TFile[] = [];
-    const re = /@\[\[([^\]]+)\]\]/g;
+    const re = /@\[\[([^]]+)\]\]/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(raw)) !== null) {
       const path = m[1].trim();
@@ -116,7 +133,14 @@ export class InputBar {
     const text = cleaned1.replace(/^\s*\$\s+[^\s]+.*$/m, "").trim();
 
     // for display in the message (LLM context), strip mention tags but keep path
-    return { text, mentions, instruction, skillBody, images: this.attachedImages };
+    return {
+      text,
+      mentions,
+      instruction,
+      skillBody,
+      images: [...this.attachedImages],
+      uploadedFiles: [...this.uploadedTextFiles],
+    };
   }
 
   focus(): void {
@@ -130,7 +154,7 @@ export class InputBar {
     const after = this.textarea.value.slice(this.textarea.selectionStart);
     // trigger suggestion only when the char just typed started an unfinished @[[ …
     const before = this.textarea.value.slice(0, this.textarea.selectionStart);
-    const startMatch = before.match(/@\[\[([^\]\[]*)$/);
+    const startMatch = before.match(/@\[\[([^][]*)$/);
     if (startMatch && !after.startsWith("]]")) {
       this.mention.open(startMatch[1]);
     } else {
@@ -165,7 +189,7 @@ export class InputBar {
       return;
     }
     const raw = this.textarea.value.trim();
-    if (!raw) return;
+    if (!raw && this.attachedImages.length === 0 && this.uploadedTextFiles.length === 0) return;
     void this.parse(raw).then((p) => this.onSend(p));
   }
 
@@ -198,6 +222,16 @@ export class InputBar {
     }
   }
 
+  private async addPickedFiles(files: File[]): Promise<void> {
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        await this.addImageFile(file);
+      } else {
+        await this.addTextFile(file);
+      }
+    }
+  }
+
   private async addImageFile(file: File): Promise<void> {
     if (file.size > 10 * 1024 * 1024) {
       new Notice(translate(this.plugin.settings.language, "image.tooLarge"));
@@ -208,22 +242,54 @@ export class InputBar {
     this.renderAttachmentThumb(b64, file.name ?? "image");
   }
 
+  private async addTextFile(file: File): Promise<void> {
+    if (!isTextUpload(file)) {
+      new Notice(this.plugin.settings.language === "zh-CN" ? "暂不支持该文件类型" : "This file type is not supported yet");
+      return;
+    }
+    if (file.size > MAX_TEXT_UPLOAD_BYTES) {
+      new Notice(this.plugin.settings.language === "zh-CN" ? "文件太大（最大 1MB）" : "File too large (max 1MB)");
+      return;
+    }
+    const uploaded = { name: file.name, text: await file.text() };
+    this.uploadedTextFiles.push(uploaded);
+    this.renderTextAttachmentChip(uploaded);
+  }
+
   private renderAttachmentThumb(b64: string, name: string): void {
-    const chip = this.attachmentBar.createDiv({ cls: "deepseek-input-attachment" });
+    const chip = this.attachmentBar.createDiv({ cls: "dsai-attachment" });
     chip.createEl("img", { attr: { src: b64, width: "48", height: "48" } });
-    chip.createEl("span", { cls: "deepseek-input-attachment__name", text: name });
-    const removeBtn = chip.createEl("span", { cls: "deepseek-input-attachment__remove", text: "×" });
+    chip.createEl("span", { cls: "dsai-attachment__name", text: name });
+    const removeBtn = chip.createEl("span", { cls: "dsai-attachment__remove", text: "×" });
     removeBtn.addEventListener("click", () => {
       this.attachedImages = this.attachedImages.filter((img) => img !== b64);
       chip.remove();
     });
   }
 
+  private renderTextAttachmentChip(uploaded: UploadedTextFile): void {
+    const chip = this.attachmentBar.createDiv({ cls: "dsai-attachment" });
+    chip.createEl("span", { cls: "dsai-attachment__file", text: "📄" });
+    chip.createEl("span", { cls: "dsai-attachment__name", text: uploaded.name });
+    const removeBtn = chip.createEl("span", { cls: "dsai-attachment__remove", text: "×" });
+    removeBtn.addEventListener("click", () => {
+      this.uploadedTextFiles = this.uploadedTextFiles.filter((file) => file !== uploaded);
+      chip.remove();
+    });
+  }
+
+  uploadedFileContext(): string[] {
+    return this.uploadedTextFiles.map(formatUploadedFileContext);
+  }
+
   private fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
+      reader.onerror = () => {
+        const error = reader.error instanceof Error ? reader.error : new Error("Failed to read image file");
+        reject(error);
+      };
       reader.readAsDataURL(file);
     });
   }

@@ -38,14 +38,14 @@ export class DeepSeekSettingsTab extends PluginSettingTab {
     });
 
     new Setting(containerEl).setName(t("settings.maxTokens")).setDesc(t("settings.maxTokensDesc")).addSlider((s) => {
-      s.setLimits(1024, 64_000, 1024).setDynamicTooltip().setValue(this.plugin.settings.maxTokens).onChange(async (v) => {
+      s.setLimits(1024, 64_000, 1024).setValue(this.plugin.settings.maxTokens).onChange(async (v) => {
         this.plugin.settings.maxTokens = v;
         await this.plugin.saveSettings();
       });
     });
 
     new Setting(containerEl).setName(t("settings.temperature")).setDesc(t("settings.temperatureDesc")).addSlider((s) => {
-      s.setLimits(0, 2, 0.05).setDynamicTooltip().setValue(this.plugin.settings.temperature).onChange(async (v) => {
+      s.setLimits(0, 2, 0.05).setValue(this.plugin.settings.temperature).onChange(async (v) => {
         this.plugin.settings.temperature = v;
         await this.plugin.saveSettings();
       });
@@ -71,7 +71,7 @@ export class DeepSeekSettingsTab extends PluginSettingTab {
     });
 
     new Setting(containerEl).setName(t("settings.maxAgentLoops")).setDesc(t("settings.maxAgentLoopsDesc")).addSlider((s) => {
-      s.setLimits(1, 40, 1).setDynamicTooltip().setValue(this.plugin.settings.maxAgentLoops).onChange(async (v) => {
+      s.setLimits(1, 40, 1).setValue(this.plugin.settings.maxAgentLoops).onChange(async (v) => {
         this.plugin.settings.maxAgentLoops = v;
         await this.plugin.saveSettings();
       });

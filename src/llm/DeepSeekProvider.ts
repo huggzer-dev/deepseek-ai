@@ -1,13 +1,7 @@
 import { requestUrl } from "obsidian";
-import { DEEPSEEK_BASE_URL, MAX_TOKENS_LIMIT, MIN_TOKENS_LIMIT, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
+import { DEEPSEEK_BASE_URL, type ChatCallbacks, type ChatOptions, type ChatResult, type Message, type FIMOptions } from "../types";
 import { asRequestError } from "./DeepSeekError";
-
-/** Clamp a value into the API's valid range, logging a warning if it had to move. */
-function clampMaxTokens(v: number): number {
-  if (!Number.isFinite(v) || v < MIN_TOKENS_LIMIT) return MIN_TOKENS_LIMIT;
-  if (v > MAX_TOKENS_LIMIT) return MAX_TOKENS_LIMIT;
-  return Math.floor(v);
-}
+import { buildChatRequestBody, clampMaxTokens } from "./DeepSeekRequest";
 
 /**
  * DeepSeek LLM provider — direct HTTPS calls to the official endpoint.
@@ -22,17 +16,7 @@ export class DeepSeekProvider {
 
   async chat(messages: Message[], opts: ChatOptions, callbacks: ChatCallbacks): Promise<ChatResult> {
     const url = `${DEEPSEEK_BASE_URL}/chat/completions`;
-    const body: Record<string, unknown> = {
-      model: opts.model,
-      messages,
-      max_tokens: clampMaxTokens(opts.maxTokens),
-      temperature: opts.temperature,
-      stream: false,
-    };
-    if (opts.tools?.length) {
-      body.tools = opts.tools;
-      body.tool_choice = opts.toolChoice ?? "auto";
-    }
+    const body = buildChatRequestBody(messages, opts);
 
     const resp = await requestUrl({
       url,

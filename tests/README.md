@@ -70,7 +70,7 @@ checklist below.
 ### Phase 4: multi-tab + plan + vision + MCP
 - [ ] Click `+` in tab bar → new session
 - [ ] Switch between tabs → messages persist
-- [ ] Close a tab → confirms deletion
+- [ ] Press left + right mouse buttons together on a session number → closes that session
 - [ ] Toggle Plan mode → badge appears
 - [ ] Ask a complex question with Plan on → "## Plan" output visible
 - [ ] Drag an image into the input bar → thumbnail appears

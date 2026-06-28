@@ -1,6 +1,6 @@
-import { App, PluginSettingTab, type SettingDefinitionItem } from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import type DeepSeekPlugin from "../main";
-import { DEEPSEEK_MODELS, RiskLevel, type DeepSeekModelId, type DeepSeekSettings, type Language } from "../types";
+import { DEEPSEEK_MODELS, RiskLevel, type Language } from "../types";
 import { translate } from "../i18n";
 
 const RISK_LABELS: Record<RiskLevel, string> = {
@@ -10,97 +10,74 @@ const RISK_LABELS: Record<RiskLevel, string> = {
   [RiskLevel.EXTERNAL]: "EXTERNAL",
 };
 
-type SettingKey = keyof Pick<
-  DeepSeekSettings,
-  "apiKey" | "model" | "maxTokens" | "temperature" | "language" | "autoApproveRisk" | "maxAgentLoops"
->;
-
 export class DeepSeekSettingsTab extends PluginSettingTab {
   constructor(app: App, private plugin: DeepSeekPlugin) {
     super(app, plugin);
   }
 
-  getSettingDefinitions(): SettingDefinitionItem<SettingKey>[] {
+  display(): void {
+    this.renderSettings();
+  }
+
+  private renderSettings(): void {
+    const { containerEl } = this;
     const t = (k: Parameters<typeof translate>[1]) => translate(this.plugin.settings.language, k);
-    return [
-      {
-        name: t("settings.apiKey"),
-        desc: t("settings.apiKeyDesc"),
-        control: { type: "text", key: "apiKey", placeholder: "sk-..." },
-      },
-      {
-        name: t("settings.model"),
-        desc: t("settings.modelDesc"),
-        control: { type: "dropdown", key: "model", options: modelOptions() },
-      },
-      {
-        name: t("settings.maxTokens"),
-        desc: t("settings.maxTokensDesc"),
-        control: { type: "slider", key: "maxTokens", min: 1024, max: 64_000, step: 1024 },
-      },
-      {
-        name: t("settings.temperature"),
-        desc: t("settings.temperatureDesc"),
-        control: { type: "slider", key: "temperature", min: 0, max: 2, step: 0.05 },
-      },
-      {
-        name: t("settings.language"),
-        desc: t("settings.languageDesc"),
-        control: { type: "dropdown", key: "language", options: { "zh-CN": "简体中文", en: "English" } },
-      },
-      {
-        name: t("settings.autoApproveRisk"),
-        desc: t("settings.autoApproveRiskDesc"),
-        control: { type: "dropdown", key: "autoApproveRisk", options: riskOptions() },
-      },
-      {
-        name: t("settings.maxAgentLoops"),
-        desc: t("settings.maxAgentLoopsDesc"),
-        control: { type: "slider", key: "maxAgentLoops", min: 1, max: 40, step: 1 },
-      },
-    ];
-  }
+    containerEl.empty();
 
-  getControlValue(key: SettingKey): unknown {
-    if (key === "autoApproveRisk") return String(this.plugin.settings.autoApproveRisk);
-    return this.plugin.settings[key];
-  }
+    new Setting(containerEl).setName(t("settings.apiKey")).setDesc(t("settings.apiKeyDesc")).addText((text) => {
+      text.inputEl.type = "password";
+      text.setPlaceholder("sk-...").setValue(this.plugin.settings.apiKey).onChange(async (value) => {
+        this.plugin.settings.apiKey = value.trim();
+        await this.plugin.saveSettings();
+      });
+    });
 
-  async setControlValue(key: SettingKey, value: unknown): Promise<void> {
-    switch (key) {
-      case "apiKey":
-        this.plugin.settings.apiKey = String(value).trim();
-        break;
-      case "model":
-        this.plugin.settings.model = value as DeepSeekModelId;
-        break;
-      case "maxTokens":
-        this.plugin.settings.maxTokens = Number(value);
-        break;
-      case "temperature":
-        this.plugin.settings.temperature = Number(value);
-        break;
-      case "language":
+    new Setting(containerEl).setName(t("settings.model")).setDesc(t("settings.modelDesc")).addDropdown((dropdown) => {
+      for (const model of DEEPSEEK_MODELS) dropdown.addOption(model.id, model.label);
+      dropdown.setValue(this.plugin.settings.model).onChange(async (value) => {
+        this.plugin.settings.model = value as (typeof DEEPSEEK_MODELS)[number]["id"];
+        await this.plugin.saveSettings();
+      });
+    });
+
+    new Setting(containerEl).setName(t("settings.maxTokens")).setDesc(t("settings.maxTokensDesc")).addSlider((slider) => {
+      slider.setLimits(1024, 64_000, 1024).setValue(this.plugin.settings.maxTokens).onChange(async (value) => {
+        this.plugin.settings.maxTokens = value;
+        await this.plugin.saveSettings();
+      });
+    });
+
+    new Setting(containerEl).setName(t("settings.temperature")).setDesc(t("settings.temperatureDesc")).addSlider((slider) => {
+      slider.setLimits(0, 2, 0.05).setValue(this.plugin.settings.temperature).onChange(async (value) => {
+        this.plugin.settings.temperature = value;
+        await this.plugin.saveSettings();
+      });
+    });
+
+    new Setting(containerEl).setName(t("settings.language")).setDesc(t("settings.languageDesc")).addDropdown((dropdown) => {
+      dropdown.addOption("zh-CN", "简体中文").addOption("en", "English");
+      dropdown.setValue(this.plugin.settings.language).onChange(async (value) => {
         this.plugin.settings.language = value as Language;
-        break;
-      case "autoApproveRisk":
+        await this.plugin.saveSettings();
+        this.renderSettings();
+      });
+    });
+
+    new Setting(containerEl).setName(t("settings.autoApproveRisk")).setDesc(t("settings.autoApproveRiskDesc")).addDropdown((dropdown) => {
+      for (const risk of [RiskLevel.READ_ONLY, RiskLevel.EDIT_SAFE, RiskLevel.EDIT_DANGER, RiskLevel.EXTERNAL]) {
+        dropdown.addOption(String(risk), RISK_LABELS[risk]);
+      }
+      dropdown.setValue(String(this.plugin.settings.autoApproveRisk)).onChange(async (value) => {
         this.plugin.settings.autoApproveRisk = Number(value) as RiskLevel;
-        break;
-      case "maxAgentLoops":
-        this.plugin.settings.maxAgentLoops = Number(value);
-        break;
-    }
-    await this.plugin.saveSettings();
-    if (key === "language") this.update();
+        await this.plugin.saveSettings();
+      });
+    });
+
+    new Setting(containerEl).setName(t("settings.maxAgentLoops")).setDesc(t("settings.maxAgentLoopsDesc")).addSlider((slider) => {
+      slider.setLimits(1, 40, 1).setValue(this.plugin.settings.maxAgentLoops).onChange(async (value) => {
+        this.plugin.settings.maxAgentLoops = value;
+        await this.plugin.saveSettings();
+      });
+    });
   }
-}
-
-function modelOptions(): Record<string, string> {
-  return Object.fromEntries(DEEPSEEK_MODELS.map((model) => [model.id, model.label]));
-}
-
-function riskOptions(): Record<string, string> {
-  return Object.fromEntries(
-    [RiskLevel.READ_ONLY, RiskLevel.EDIT_SAFE, RiskLevel.EDIT_DANGER, RiskLevel.EXTERNAL].map((risk) => [String(risk), RISK_LABELS[risk]]),
-  );
 }

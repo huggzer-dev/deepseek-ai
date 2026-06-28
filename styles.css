@@ -39,6 +39,22 @@ body.theme-dark {
   --dsai-success:       var(--text-success, #4ade80);
 }
 
+/* ---- settings tab numeric slider value boxes ---- */
+.deepseek-setting-number-control {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.deepseek-setting-number-control input[type="range"] {
+  min-width: 160px;
+}
+.deepseek-setting-number-input {
+  width: 112px;
+  min-width: 112px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- root container ---- */
 .deepseek-chat-view {
   display: flex;

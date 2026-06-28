@@ -1,7 +1,8 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, type SliderComponent, type TextComponent } from "obsidian";
 import type DeepSeekPlugin from "../main";
 import { DEEPSEEK_MODELS, RiskLevel, type Language } from "../types";
 import { translate } from "../i18n";
+import { formatNumericSetting, normalizeNumericSetting, NUMERIC_SETTING_SPECS, recommendedNumericText, type NumericSettingSpec } from "./NumericSetting";
 
 const RISK_LABELS: Record<RiskLevel, string> = {
   [RiskLevel.READ_ONLY]: "READ_ONLY",
@@ -40,18 +41,14 @@ export class DeepSeekSettingsTab extends PluginSettingTab {
       });
     });
 
-    new Setting(containerEl).setName(t("settings.maxTokens")).setDesc(t("settings.maxTokensDesc")).addSlider((slider) => {
-      slider.setLimits(1024, 64_000, 1024).setValue(this.plugin.settings.maxTokens).onChange(async (value) => {
-        this.plugin.settings.maxTokens = value;
-        await this.plugin.saveSettings();
-      });
+    this.addNumericSetting(containerEl, t("settings.maxTokens"), t("settings.maxTokensDesc"), this.plugin.settings.maxTokens, NUMERIC_SETTING_SPECS.maxTokens, async (value) => {
+      this.plugin.settings.maxTokens = value;
+      await this.plugin.saveSettings();
     });
 
-    new Setting(containerEl).setName(t("settings.temperature")).setDesc(t("settings.temperatureDesc")).addSlider((slider) => {
-      slider.setLimits(0, 2, 0.05).setValue(this.plugin.settings.temperature).onChange(async (value) => {
-        this.plugin.settings.temperature = value;
-        await this.plugin.saveSettings();
-      });
+    this.addNumericSetting(containerEl, t("settings.temperature"), t("settings.temperatureDesc"), this.plugin.settings.temperature, NUMERIC_SETTING_SPECS.temperature, async (value) => {
+      this.plugin.settings.temperature = value;
+      await this.plugin.saveSettings();
     });
 
     new Setting(containerEl).setName(t("settings.language")).setDesc(t("settings.languageDesc")).addDropdown((dropdown) => {
@@ -73,11 +70,65 @@ export class DeepSeekSettingsTab extends PluginSettingTab {
       });
     });
 
-    new Setting(containerEl).setName(t("settings.maxAgentLoops")).setDesc(t("settings.maxAgentLoopsDesc")).addSlider((slider) => {
-      slider.setLimits(1, 40, 1).setValue(this.plugin.settings.maxAgentLoops).onChange(async (value) => {
-        this.plugin.settings.maxAgentLoops = value;
-        await this.plugin.saveSettings();
+    this.addNumericSetting(containerEl, t("settings.maxAgentLoops"), t("settings.maxAgentLoopsDesc"), this.plugin.settings.maxAgentLoops, NUMERIC_SETTING_SPECS.maxAgentLoops, async (value) => {
+      this.plugin.settings.maxAgentLoops = value;
+      await this.plugin.saveSettings();
+    });
+  }
+
+  private addNumericSetting(
+    containerEl: HTMLElement,
+    name: string,
+    description: string,
+    value: number,
+    spec: NumericSettingSpec,
+    saveValue: (value: number) => Promise<void>,
+  ): void {
+    let sliderComponent: SliderComponent;
+    let textComponent: TextComponent;
+    let currentValue = normalizeNumericSetting(value, spec);
+
+    const setting = new Setting(containerEl).setName(name).setDesc(`${description} · ${recommendedNumericText(spec)}`);
+    setting.controlEl.addClass("deepseek-setting-number-control");
+
+    const persist = async (nextValue: number): Promise<void> => {
+      currentValue = normalizeNumericSetting(nextValue, spec);
+      sliderComponent.setValue(currentValue);
+      textComponent.setValue(formatNumericSetting(currentValue, spec));
+      await saveValue(currentValue);
+    };
+
+    setting.addText((text) => {
+      textComponent = text;
+      text.inputEl.type = "number";
+      text.inputEl.addClass("deepseek-setting-number-input");
+      text.inputEl.min = String(spec.min);
+      text.inputEl.max = String(spec.max);
+      text.inputEl.step = String(spec.step);
+      text.setPlaceholder(formatNumericSetting(spec.recommended, spec));
+      text.setValue(formatNumericSetting(currentValue, spec));
+      text.inputEl.addEventListener("blur", () => {
+        void persist(Number(text.inputEl.value));
       });
+      text.inputEl.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          text.inputEl.blur();
+        }
+      });
+    });
+
+    setting.addSlider((slider) => {
+      sliderComponent = slider;
+      slider
+        .setLimits(spec.min, spec.max, spec.step)
+        .setInstant(true)
+        .setValue(currentValue)
+        .onChange((nextValue) => {
+          currentValue = normalizeNumericSetting(nextValue, spec);
+          textComponent.setValue(formatNumericSetting(currentValue, spec));
+          void saveValue(currentValue);
+        });
     });
   }
 }

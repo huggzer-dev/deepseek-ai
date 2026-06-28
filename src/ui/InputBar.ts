@@ -83,7 +83,7 @@ export class InputBar {
   }
 
   openFilePicker(): void {
-    const input = document.createElement("input");
+    const input = activeDocument.createElement("input");
     input.type = "file";
     input.multiple = true;
     input.accept = "image/*,.txt,.md,.markdown,.csv,.json,.yaml,.yml,.xml,.html,.css,.js,.ts,.tsx,.log";
@@ -154,9 +154,10 @@ export class InputBar {
     const after = this.textarea.value.slice(this.textarea.selectionStart);
     // trigger suggestion only when the char just typed started an unfinished @[[ …
     const before = this.textarea.value.slice(0, this.textarea.selectionStart);
-    const startMatch = before.match(/@\[\[([^][]*)$/);
-    if (startMatch && !after.startsWith("]]")) {
-      this.mention.open(startMatch[1]);
+    const mentionStart = before.lastIndexOf("@[[");
+    const mentionQuery = mentionStart >= 0 ? before.slice(mentionStart + 3) : undefined;
+    if (mentionQuery !== undefined && !mentionQuery.includes("[") && !mentionQuery.includes("]") && !after.startsWith("]]")) {
+      this.mention.open(mentionQuery);
     } else {
       this.mention.close();
     }

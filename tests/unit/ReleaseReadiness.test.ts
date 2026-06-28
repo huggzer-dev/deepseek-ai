@@ -53,8 +53,12 @@ describe("release readiness", () => {
     const root = process.cwd();
     const warningPatterns = [
       { label: "deprecated setDynamicTooltip", pattern: /setDynamicTooltip\(/ },
+      { label: "deprecated self display refresh", pattern: /this\.display\(/ },
       { label: "global timer", pattern: /(^|[^.])\b(?:setTimeout|clearTimeout)\(/ },
+      { label: "popup-incompatible document", pattern: /\bdocument\./ },
+      { label: "popup-incompatible globalThis", pattern: /\bglobalThis\b/ },
       { label: "non-Error promise rejection", pattern: /reject\(reader\.error\)/ },
+      { label: "regex empty class warning", pattern: /\[\^\]\[\]/ },
     ];
     const hits = sourceFiles(join(root, "src")).flatMap((file) => {
       const lines = readFileSync(file, "utf8").split(/\r?\n/);

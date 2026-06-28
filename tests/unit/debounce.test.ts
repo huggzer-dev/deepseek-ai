@@ -2,6 +2,14 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { debounce } from "../../src/utils/debounce";
 
+const testWindow = globalThis as typeof globalThis & {
+  window?: Pick<Window, "clearTimeout" | "setTimeout">;
+};
+testWindow.window = {
+  clearTimeout: globalThis.clearTimeout as unknown as Window["clearTimeout"],
+  setTimeout: globalThis.setTimeout as unknown as Window["setTimeout"],
+};
+
 describe("debounce", () => {
   test("calls fn only after wait period", async () => {
     let count = 0;
